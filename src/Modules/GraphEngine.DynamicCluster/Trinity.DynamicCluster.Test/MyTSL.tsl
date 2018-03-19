@@ -1,0 +1,24 @@
+cell IntCell
+{
+	int currentInt;
+}
+cell StringCell
+{
+	string currentString;
+}
+cell DoubleCell
+{
+	string currentDouble;
+}
+cell ListCell
+{
+	List<string> stringList;
+}
+struct MyStruct
+{
+	List<string> stringList;
+}
+cell ComplexCell
+{
+	List<MyStruct> structList;
+}

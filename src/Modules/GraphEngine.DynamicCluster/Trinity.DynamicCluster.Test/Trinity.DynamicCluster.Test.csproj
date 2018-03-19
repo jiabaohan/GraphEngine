@@ -6,6 +6,10 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|netcoreapp2.0|AnyCPU'">
+    <PlatformTarget>x64</PlatformTarget>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="GraphEngine.Core" Version="1.0.9083" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.5.0" />
@@ -18,4 +22,12 @@
     <ProjectReference Include="..\Trinity.DynamicCluster\Trinity.DynamicCluster.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Reference Include="Trinity.Core">
+      <HintPath>..\..\..\..\bin\netstandard2.0\Trinity.Core.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <TslCodegen Include="**/*.tsl"/>
+  </ItemGroup>
 </Project>

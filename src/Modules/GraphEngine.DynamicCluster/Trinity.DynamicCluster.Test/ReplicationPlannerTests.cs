@@ -11,6 +11,7 @@ using Trinity.DynamicCluster.Test.Mocks;
 using Trinity.Network.Messaging;
 using Trinity.Storage;
 using Trinity.DynamicCluster.Replication;
+using Trinity.DynamicCluster.Tasks;
 namespace Trinity.DynamicCluster.Test
 {
     [TestClass]
@@ -48,12 +49,25 @@ namespace Trinity.DynamicCluster.Test
         [TestMethod]
         public void ShardingPlannerTest()
         {
-
+            ShardingPlanner sp = new ShardingPlanner();
+            var input = GenerateInput();
+            var result = sp.Plan(3, input);
+            List<ITask> final = new List<ITask>();
+            foreach (var task in result)
+                final.Add(task);
+            Console.WriteLine();
         }
         [TestMethod]
         public void PlannerTest()
         {
-           
+
+            MirroringPlanner mp = new MirroringPlanner();
+            var input = GenerateInput();
+            var result = mp.Plan(3, input);
+            List<ITask> final = new List<ITask>();
+            foreach (var task in result)
+                final.Add(task);
+            Console.WriteLine();
         }
     }
 }
