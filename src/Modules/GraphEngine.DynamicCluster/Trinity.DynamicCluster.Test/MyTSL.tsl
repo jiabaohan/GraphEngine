@@ -8,7 +8,7 @@ cell StringCell
 }
 cell DoubleCell
 {
-	string currentDouble;
+	double currentDouble;
 }
 cell ListCell
 {

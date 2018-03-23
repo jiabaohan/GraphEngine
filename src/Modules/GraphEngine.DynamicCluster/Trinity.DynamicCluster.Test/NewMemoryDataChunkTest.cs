@@ -44,12 +44,16 @@ namespace Trinity.DynamicCluster.Test
         {
             int cuttentThreshold = minThreshold;
             int time = 0;
-            for (int i = 0; i < Total; i += unit)
+            int temp = 0;
+            for (int i = 0; i <= Total; i += unit)
+            {
                 if (i > cuttentThreshold)
                 {
                     cuttentThreshold *= 2;
                     time++;
                 }
+                temp = i;
+            }
             return time;
         }
         private List<CellInfo> GetIntCellInfo(int cellCount)
@@ -58,6 +62,56 @@ namespace Trinity.DynamicCluster.Test
             {
                 IntCell intCell = new IntCell(1);
                 Global.LocalStorage.SaveIntCell(intCell);
+            }
+            var cells = Global.LocalStorage.GetEnumerator();
+            List<CellInfo> cellInfoList = new List<CellInfo>();
+            while (cells.MoveNext())
+                cellInfoList.Add(cells.Current);
+            return cellInfoList;
+        }
+        private List<CellInfo> GetDoubleCellInfo(int cellCount)
+        {
+            for (int i = 0; i < cellCount; i++)
+            {
+                DoubleCell doubleCell = new DoubleCell(0.001);
+                Global.LocalStorage.SaveDoubleCell(doubleCell);
+            }
+            var cells = Global.LocalStorage.GetEnumerator();
+            List<CellInfo> cellInfoList = new List<CellInfo>();
+            while (cells.MoveNext())
+                cellInfoList.Add(cells.Current);
+            return cellInfoList;
+        }
+        private List<CellInfo> GetStringCellInfo(int cellCount, int charCount)
+        {
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < charCount; i++)
+            {
+                sb.Append('a');
+            }
+            for (int i = 0; i < cellCount; i++)
+            {
+                StringCell stringCell = new StringCell(sb.ToString());
+                Global.LocalStorage.SaveStringCell(stringCell);
+            }
+            var cells = Global.LocalStorage.GetEnumerator();
+            List<CellInfo> cellInfoList = new List<CellInfo>();
+            while (cells.MoveNext())
+                cellInfoList.Add(cells.Current);
+            return cellInfoList;
+        }
+        private List<CellInfo> GetStringListCellInfo(int cellCount, int charCount, int listLength)
+        {
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < charCount; i++)
+                sb.Append('a');
+            List<string> content = new List<string>();
+            for (int i = 0; i < listLength; i++)
+                content.Add(sb.ToString());
+            for (int i = 0; i < cellCount; i++)
+            {
+                ListCell listCell = new ListCell(content);
+                Global.LocalStorage.SaveListCell(listCell);
             }
             var cells = Global.LocalStorage.GetEnumerator();
             List<CellInfo> cellInfoList = new List<CellInfo>();
@@ -85,7 +139,7 @@ namespace Trinity.DynamicCluster.Test
             var cellInfoList = GetIntCellInfo(cellCount);
             var obj = InMemoryDataChunk.New(cellInfoList, (int)Global.LocalStorage.TotalCellSize);
             var capacity = obj.GetBuffer();
-            Assert.AreEqual(CalcMemoryCapacity(cellCount,eachCellSize,(int)Global.LocalStorage.TotalCellSize), capacity.Length);
+            Assert.AreEqual(CalcMemoryCapacity(cellCount, eachCellSize, (int)Global.LocalStorage.TotalCellSize), capacity.Length);
         }
         [TestMethod]
         public unsafe void NewChunkTest3()
@@ -96,6 +150,44 @@ namespace Trinity.DynamicCluster.Test
             var obj = InMemoryDataChunk.New(cellInfoList, (int)Global.LocalStorage.TotalCellSize);
             var capacity = obj.GetBuffer();
             Assert.AreEqual(CalcMemoryCapacity(cellCount, eachCellSize, (int)Global.LocalStorage.TotalCellSize), capacity.Length);
+        }
+        [TestMethod]
+        public unsafe void NewChunkTest4()
+        {
+            int cellCount = 100;
+            int eachCellSize = sizeof(double);
+            var cellInfoList = GetDoubleCellInfo(cellCount);
+            var obj = InMemoryDataChunk.New(cellInfoList, (int)Global.LocalStorage.TotalCellSize);
+            var capacity = obj.GetBuffer();
+            Assert.AreEqual(CalcMemoryCapacity(cellCount, eachCellSize, (int)Global.LocalStorage.TotalCellSize), capacity.Length);
+        }
+        [TestMethod]
+        public unsafe void NewChunkTest5()
+        {
+            int cellCount = 100;
+            int charCount = 10000;
+            var cellInfoList = GetStringCellInfo(cellCount, charCount);
+            int eachCellSize = 2 * charCount + 4;
+            var obj = InMemoryDataChunk.New(cellInfoList, (int)Global.LocalStorage.TotalCellSize);
+            var capacity = obj.GetBuffer();
+            Assert.AreEqual(CalcMemoryCapacity(cellCount, eachCellSize, (int)Global.LocalStorage.TotalCellSize), capacity.Length);
+        }
+        [TestMethod]
+        public unsafe void NewChunkTest6()
+        {
+            int cellCount = 100;
+            int charCount = 10;
+            var listLength = 10000000;
+            var cellInfoList = GetStringListCellInfo(cellCount, charCount, listLength);
+            var eachCellSize = (2 * charCount + 4) * listLength + 4;
+            var obj = InMemoryDataChunk.New(cellInfoList, (int)Global.LocalStorage.TotalCellSize);
+            var capacity = obj.GetBuffer();
+            Assert.AreEqual(CalcMemoryCapacity(cellCount, eachCellSize, (int)Global.LocalStorage.TotalCellSize), capacity.Length);
+        }
+        [TestMethod]
+        public unsafe void NewChunkTest7()
+        {
+
         }
     }
 }
