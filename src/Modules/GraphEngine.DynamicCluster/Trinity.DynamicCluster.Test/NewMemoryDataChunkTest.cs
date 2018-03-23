@@ -119,6 +119,29 @@ namespace Trinity.DynamicCluster.Test
                 cellInfoList.Add(cells.Current);
             return cellInfoList;
         }
+        private List<CellInfo> GetNestStringListCellInfo(int cellCount, int charCount, int structLength, int structListLength)
+        {
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < charCount; i++)
+                sb.Append('a');
+            List<string> content = new List<string>();
+            for (int i = 0; i < structListLength; i++)
+                content.Add(sb.ToString());
+            List<MyStruct> cellContent = new List<MyStruct>();
+            for (int i = 0; i < structLength; i++)
+                cellContent.Add(new MyStruct(new List<string>(content)));
+
+            for (int i = 0; i < cellCount; i++)
+            {
+                ComplexCell cc = new ComplexCell(cellContent);
+                Global.LocalStorage.SaveComplexCell(cc);
+            }
+            var cells = Global.LocalStorage.GetEnumerator();
+            List<CellInfo> cellInfoList = new List<CellInfo>();
+            while (cells.MoveNext())
+                cellInfoList.Add(cells.Current);
+            return cellInfoList;
+        }
         [TestMethod]
         public unsafe void NewChunkTest()
         {
@@ -187,7 +210,15 @@ namespace Trinity.DynamicCluster.Test
         [TestMethod]
         public unsafe void NewChunkTest7()
         {
-
+            int cellCount = 100;
+            int charCount = 10;
+            int listStructLength = 10000;
+            int listInStructLength = 10000;
+            var cellInfoList = GetNestStringListCellInfo(cellCount, charCount, listStructLength, listInStructLength);
+            var eachCellSize = (int)Global.LocalStorage.TotalCellSize / 100;
+            var obj = InMemoryDataChunk.New(cellInfoList, (int)Global.LocalStorage.TotalCellSize);
+            var capacity = obj.GetBuffer();
+            Assert.AreEqual(CalcMemoryCapacity(cellCount, eachCellSize, (int)Global.LocalStorage.TotalCellSize), capacity.Length);
         }
     }
 }
