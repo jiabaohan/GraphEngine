@@ -21,6 +21,7 @@ using Trinity.Network.Messaging;
 using System.Diagnostics;
 using Trinity.Utilities;
 using Trinity.Extension;
+using System.Runtime.InteropServices;
 
 namespace Trinity.Network
 {
@@ -46,6 +47,7 @@ namespace Trinity.Network
         private bool m_started = false;
         private object m_lock = new object();
         private ManualResetEventSlim m_module_init_signal = new ManualResetEventSlim(initialState: false);
+        private MessageDispatchProc m_dispatcher = null;
         // XXX ThreadStatic does not work well with async/await. Find a solution.
         [ThreadStatic]
         private static HttpListenerContext s_current_http_ctx = null;
@@ -260,13 +262,6 @@ namespace Trinity.Network
         /// </summary>
         protected internal abstract RunningMode RunningMode { get; }
 
-        private bool HasHttpEndpoints()
-        {
-            return
-                (this.GetCommunicationSchema().HttpEndpointNames.Count() != 0) ||
-                (this.m_CommunicationModules.Values.Any(m => m.GetCommunicationSchema().HttpEndpointNames.Count() != 0));
-        }
-
         /// <summary>
         /// Starts a Trinity instance.
         /// </summary>
@@ -300,8 +295,8 @@ namespace Trinity.Network
                     m_module_init_signal.Set();
                     MessageDispatcher = MessageHandlers.DefaultParser.DispatchMessage;
 
-                    Console.WriteLine("Working Directory: {0}", Global.MyAssemblyPath);
-                    Console.WriteLine(TrinityConfig.OutputCurrentConfig());
+                    Log.WriteLine("Working Directory: {0}", Global.MyAssemblyPath);
+                    Log.WriteLines(TrinityConfig.OutputCurrentConfig());
 
                     m_started = true;
                     Log.WriteLine("{0} {1} is successfully started.", RunningMode, memory_cloud.MyInstanceId);
@@ -357,7 +352,20 @@ namespace Trinity.Network
         /// <summary>
         /// A delegate that points to the message dispatch and processing procedure.
         /// </summary>
-        public MessageDispatchProc MessageDispatcher { get; internal set; }
+        public MessageDispatchProc MessageDispatcher
+        {
+            get => m_dispatcher;
+            set
+            {
+                m_dispatcher = value;
+                GC.SuppressFinalize(m_dispatcher);
+                var pfn_dispatch = Marshal.GetFunctionPointerForDelegate(m_dispatcher);
+                for (ushort i = 0; i<(ushort)TrinityMessageType.MESSAGE_TYPE_MAX; ++i)
+                {
+                    Global.RegisterMessageHandler(i, pfn_dispatch);
+                }
+            }
+        }
 
         /// <summary>
         /// Start listening for incoming connections. When this method is called,
@@ -377,8 +385,7 @@ namespace Trinity.Network
             Log.WriteLine("My IPEndPoint: " + _my_ip + ":" + _config.ListeningPort);
 
             //  Initialize Http server
-            if (HasHttpEndpoints())
-                StartHttpServer();
+            StartHttpServer();
         }
 
         /// <summary>
@@ -386,8 +393,7 @@ namespace Trinity.Network
         /// </summary>
         protected virtual void StopCommunicationListeners()
         {
-            if (HasHttpEndpoints())
-                StopHttpServer();
+            StopHttpServer();
 
             //  Shutdown message passing networking
             NativeNetwork.StopTrinityServer();
@@ -396,7 +402,7 @@ namespace Trinity.Network
         private void _ScanForAutoRegisteredModules()
         {
             Log.WriteLine("Scanning for auto-registered communication modules.");
-            foreach(var m in AssemblyUtility.GetAllClassTypes<CommunicationModule, AutoRegisteredCommunicationModuleAttribute>())
+            foreach (var m in AssemblyUtility.GetAllClassTypes<CommunicationModule, AutoRegisteredCommunicationModuleAttribute>())
             {
                 m_RegisteredModuleTypes.Add(m);
             }

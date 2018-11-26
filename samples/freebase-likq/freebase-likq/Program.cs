@@ -8,10 +8,11 @@ using Newtonsoft.Json.Linq;
 using Trinity.Core.Lib;
 using System.IO;
 using Trinity.Diagnostics;
-using System.Data.SQLite;
 using System.Net;
 using System.Diagnostics;
 using System.IO.Compression;
+using freebase_tsl;
+using System.Data.SQLite;
 
 namespace freebase_likq
 {
@@ -19,6 +20,8 @@ namespace freebase_likq
     {
         private static SQLiteConnection s_dbconn;
         private static string s_freebase_data_blobcontainer = "https://graphengine.blob.core.windows.net/public-data";
+        //  !Note, different datasets are built with different TSL extensions,
+        //  make sure you reference the correct TSL storage extension dll!
         private static string s_freebase_dataset = "freebase-full-dataset-20170410.zip";
 
         static void Main(string[] args)
@@ -41,8 +44,6 @@ namespace freebase_likq
             LambdaDSL.SetDialect("Freebase", "StartFrom", "VisitNode", "FollowEdge", "Action");
             //  Plug-in Freebase ICell adapter
             FanoutSearchModule.RegisterUseICellOperationMethod(CellGroupAccessor.New);
-            //  Plug-in Serialize.Linq expression serializer
-            FanoutSearchModule.RegisterExpressionSerializerFactory(ExpressionSerializerFactory);
             //  Configure LIKQ timeout
             FanoutSearchModule.SetQueryTimeout(1000000);
 
@@ -70,11 +71,6 @@ namespace freebase_likq
             return;
         }
 
-        private static IExpressionSerializer ExpressionSerializerFactory()
-        {
-            return new ExpressionSerializer();
-        }
-
         private static void BuildIndex(string sqlite_db_path)
         {
             SQLiteConnection.CreateFile(sqlite_db_path);
@@ -92,7 +88,7 @@ namespace freebase_likq
             {
                 if (!type_object.Contains_type_object_name) continue;
                 string name = type_object.type_object_name.ToString().Replace("'", "''");
-                batch.Add(Tuple.Create(name, type_object.CellID.Value));
+                batch.Add(Tuple.Create(name, type_object.CellId));
                 if (++processed_count % 100000 == 0)
                 {
                     Log.WriteLine("{0} cells processed", processed_count);
@@ -127,7 +123,7 @@ namespace freebase_likq
             download_client.DownloadFileTaskAsync($"{s_freebase_data_blobcontainer}/{s_freebase_dataset}", s_freebase_dataset).Wait();
             Console.WriteLine();
             Log.WriteLine("Download complete. Unarchiving storage folder...");
-            ZipFile.ExtractToDirectory("freebase-full-dataset.zip", Global.MyAssemblyPath);
+            ZipFile.ExtractToDirectory(s_freebase_dataset, Global.MyAssemblyPath);
             Log.WriteLine("Successfully unarchived the data files.");
         }
 
@@ -166,7 +162,7 @@ namespace freebase_likq
         /// a registered index service to retrieve vertices satisfying the constraints.
         /// The constraints are specified in the match object, which is a json object.
         /// LIKQ itself does not specify the DSL syntax for the match object so here
-        /// we eatablish a simple one, which accepts three types of queries:
+        /// we establish a simple one, which accepts three types of queries:
         /// 
         ///   1. Query by Freebase MID.
         ///   2. Query by type_object_name.

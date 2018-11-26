@@ -16,10 +16,13 @@ namespace Trinity.Client.TestServer
     {
         static void Main(string[] args)
         {
+            TrinityConfig.LoggingLevel = Diagnostics.LogLevel.Debug;
             TrinityServer server = new TrinityServer();
             server.RegisterCommunicationModule<TrinityClientModule.TrinityClientModule>();
             server.RegisterCommunicationModule<TrinityClientTestModule>();
             server.Start();
+
+            Global.LocalStorage.SaveC1(0, "foo", 123);
 
             var cmod = server.GetCommunicationModule<TrinityClientModule.TrinityClientModule>();
             var tmod = server.GetCommunicationModule<TrinityClientTestModule>();
@@ -44,6 +47,7 @@ namespace Trinity.Client.TestServer
                     catch (Exception ex)
                     {
                         Console.WriteLine(ex.ToString());
+                        --i;
                     }
                 }
                 Thread.Sleep(1000);

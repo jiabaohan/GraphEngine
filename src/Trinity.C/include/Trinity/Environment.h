@@ -5,6 +5,7 @@
 #pragma once
 #include "String.h"
 #include <cstdint>
+#include <vector>
 #include <os/os.h>
 
 #if !defined(TRINITY_PLATFORM_WINDOWS)
@@ -65,5 +66,40 @@ namespace Trinity
             return std::thread::hardware_concurrency();
 #endif
 		}
+
+        inline std::vector<String> Run(const char* command)
+        {
+            std::vector<String> ret;
+            Array<char>   lplinebuf(1024);
+            FILE*         pspipe = _popen(command, "r");
+
+            if (nullptr == pspipe)
+            {
+                return ret;
+            }
+
+            while (fgets(lplinebuf, (int)lplinebuf.Length(), pspipe))
+            {
+                ret.push_back(String(lplinebuf));
+            }
+
+            _pclose(pspipe);
+
+            return ret;
+        }
+
+        inline String GetVariable(const String& name)
+        {
+            return getenv(name.Data());
+        }
+
+        inline void SetVariable(const String& name, const String& value)
+        {
+#if defined(TRINITY_PLATFORM_WINDOWS)
+            SetEnvironmentVariable(name.ToWcharArray(), value.ToWcharArray());
+#else
+            setenv(name.Data(), value.Data(), 1);
+#endif
+        }
 	}
 }

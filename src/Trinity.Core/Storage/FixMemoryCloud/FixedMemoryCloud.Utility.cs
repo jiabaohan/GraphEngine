@@ -49,9 +49,8 @@ namespace Trinity.Storage
                 byte* p = byte_p;
                 *(int*)p = TrinityProtocol.TrinityMsgHeader;
 
-                *(p + TrinityProtocol.MsgTypeOffset) = (byte)TrinityMessageType.PRESERVED_ASYNC;
-
-                *(p + TrinityProtocol.MsgIdOffset) = (byte)RequestType.Shutdown;
+                *(TrinityMessageType*)(p + TrinityProtocol.MsgTypeOffset) = TrinityMessageType.PRESERVED_ASYNC;
+                *(RequestType*)(p + TrinityProtocol.MsgIdOffset) = RequestType.Shutdown;
                 StorageTable[serverId].SendMessage(byte_p, message_bytes.Length);
             }
 
@@ -68,6 +67,7 @@ namespace Trinity.Storage
         /// </summary>
         public unsafe void ShutDown()
         {
+            //TODO should be IDisposable, not ShutDown
             //TODO move this to base implementation;
             if (TrinityConfig.CurrentRunningMode == RunningMode.Client)
             {

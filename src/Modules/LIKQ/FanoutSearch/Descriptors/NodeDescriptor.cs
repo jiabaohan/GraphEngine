@@ -70,7 +70,7 @@ namespace FanoutSearch
         public void Serialize(TextWriter writer)
         {
             writer.Write('{');
-            writer.Write("\"CellID\":");
+            writer.Write("\"CellId\":");
             writer.Write(id);
             for (int i = 0, len = keys.Count; i < len; ++i)
             {
@@ -87,7 +87,7 @@ namespace FanoutSearch
             if (v == string.Empty) return "\"\"";
             var fchar = v[0];
 
-            if (char.IsLetter(fchar)) // probably a string. don't parse
+            if (char.IsLetter(fchar) || (char.Equals('0', fchar) && v.Length > 1)) // probably a string. don't parse
             {
                 goto return_string;
             }

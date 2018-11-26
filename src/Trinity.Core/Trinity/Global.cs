@@ -21,6 +21,7 @@ using Trinity.Diagnostics;
 using System.Runtime.CompilerServices;
 using Trinity.Extension;
 using Trinity.Configuration;
+using System.Runtime.InteropServices;
 
 namespace Trinity
 {
@@ -86,6 +87,19 @@ namespace Trinity
             if (storageSchema == null) { throw new ArgumentNullException("storageSchema"); }
             if (genericCellOps.GetType().Assembly != storageSchema.GetType().Assembly) { throw new ArgumentException("Components being registered are from different storage extensions."); }
 
+
+            if (storageSchema is IStorageSchemaUpdateNotifier notifier)
+            {
+                notifier.StorageSchemaUpdated += StorageSchemaUpdated;
+            }
+
+            EventRaiser.RaiseStorageEvent(StorageSchemaUpdated, nameof(StorageSchemaUpdated));
+
+            if (storage_schema is IStorageSchemaUpdateNotifier old_notifier)
+            {
+                old_notifier.StorageSchemaUpdated -= StorageSchemaUpdated;
+            }
+
             generic_cell_ops = genericCellOps;
             storage_schema   = storageSchema;
         }
@@ -122,6 +136,7 @@ namespace Trinity
             }
 
 _return:
+
             return Tuple.Create(_generic_cell_ops, _storage_schema, priority);
         }
 
@@ -135,6 +150,7 @@ _return:
             {
                 try
                 {
+                    Log.WriteLine(LogLevel.Debug, $"Executing startup task {task.GetType().FullName}");
                     task.Run();
                 }
                 catch (Exception ex)
@@ -238,5 +254,12 @@ _return:
         {
             CommunicationInstanceStarted();
         }
+
+        [DllImport(TrinityC.AssemblyName)]
+        internal static extern TrinityErrorCode StartEventLoop();
+        [DllImport(TrinityC.AssemblyName)]
+        internal static extern TrinityErrorCode StopEventLoop();
+        [DllImport(TrinityC.AssemblyName)]
+        internal static extern TrinityErrorCode RegisterMessageHandler(ushort msgId, IntPtr handler);
     }
 }

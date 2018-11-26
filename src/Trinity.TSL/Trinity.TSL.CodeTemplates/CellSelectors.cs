@@ -13,6 +13,8 @@ using System.Linq.Expressions;
 
 /*MAP_VAR("t_Namespace", "Trinity::Codegen::GetNamespace()")*/
 using t_Namespace.Linq;
+using Trinity.Storage.Transaction;
+
 namespace t_Namespace
 {
     [TARGET("NTSL")]
@@ -105,15 +107,17 @@ namespace t_Namespace
     internal class t_cell_name_AccessorEnumerable : IEnumerable<t_cell_name_Accessor>
     {
         private     LocalMemoryStorage              m_storage;
+        private     LocalTransactionContext         m_tx;
         private     HashSet<long>                   m_filter_set;
         private     bool                            m_is_positive_filtering;
         private     Func<t_cell_name_Accessor,bool> m_filter_predicate;
 
-        internal t_cell_name_AccessorEnumerable(LocalMemoryStorage storage)
+        internal t_cell_name_AccessorEnumerable(LocalMemoryStorage storage, LocalTransactionContext tx)
         {
             this.m_storage     = storage;
             m_filter_set       = null;
             m_filter_predicate = null;
+            m_tx               = tx;
         }
 
         internal void SetPositiveFiltering(HashSet<long> set)
@@ -137,7 +141,7 @@ namespace t_Namespace
                     {
                         if (cellInfo.CellType == (ushort)CellType.t_cell_name)
                         {
-                            var accessor = t_cell_name_Accessor.AllocIterativeAccessor(cellInfo);
+                            var accessor = t_cell_name_Accessor.AllocIterativeAccessor(cellInfo, m_tx);
                             yield return accessor;
                             accessor.Dispose();
                         }
@@ -147,7 +151,7 @@ namespace t_Namespace
                     {
                         if (cellInfo.CellType == (ushort)CellType.t_cell_name)
                         {
-                            var accessor = t_cell_name_Accessor.AllocIterativeAccessor(cellInfo);
+                            var accessor = t_cell_name_Accessor.AllocIterativeAccessor(cellInfo, m_tx);
                             if (m_filter_predicate(accessor))
                                 yield return accessor;
                             accessor.Dispose();
@@ -196,17 +200,19 @@ namespace t_Namespace
 
     internal class t_cell_name_Enumerable : IEnumerable<t_cell_name>
     {
-        private     LocalMemoryStorage              m_storage;
-        private     HashSet<long>                   m_filter_set;
-        private     bool                            m_is_positive_filtering;
-        private     Func<t_cell_name,bool>          m_filter_predicate;
-        private     static Type                     m_cell_type = typeof(t_cell_name);
+        private LocalMemoryStorage      m_storage;
+        private HashSet<long>           m_filter_set;
+        private bool                    m_is_positive_filtering;
+        private Func<t_cell_name,bool>  m_filter_predicate;
+        private static Type             m_cell_type = typeof(t_cell_name);
+        private LocalTransactionContext m_tx;
 
-        internal t_cell_name_Enumerable(LocalMemoryStorage storage)
+        internal t_cell_name_Enumerable(LocalMemoryStorage storage, LocalTransactionContext tx)
         {
-            this.m_storage     = storage;
+            m_storage          = storage;
             m_filter_set       = null;
             m_filter_predicate = null;
+            m_tx               = tx;
         }
 
         internal void SetPositiveFiltering(HashSet<long> set)
@@ -230,7 +236,7 @@ namespace t_Namespace
                     {
                         if (cellInfo.CellType == (ushort)CellType.t_cell_name)
                         {
-                            var accessor = t_cell_name_Accessor.AllocIterativeAccessor(cellInfo);
+                            var accessor = t_cell_name_Accessor.AllocIterativeAccessor(cellInfo, m_tx);
                             yield return accessor;
                             accessor.Dispose();
                         }
@@ -240,7 +246,7 @@ namespace t_Namespace
                     {
                         if (cellInfo.CellType == (ushort)CellType.t_cell_name)
                         {
-                            var accessor = t_cell_name_Accessor.AllocIterativeAccessor(cellInfo);
+                            var accessor = t_cell_name_Accessor.AllocIterativeAccessor(cellInfo, m_tx);
                             if (m_filter_predicate(accessor))
                                 yield return accessor;
                             accessor.Dispose();
@@ -294,9 +300,9 @@ namespace t_Namespace
         private static  Type                             s_ienumerable_type = typeof(IEnumerable<>);
         private         t_cell_name_AccessorEnumerable   m_accessor_enumerable;
 
-        internal t_cell_name_Accessor_local_query_provider(LocalMemoryStorage storage)
+        internal t_cell_name_Accessor_local_query_provider(LocalMemoryStorage storage, LocalTransactionContext tx)
         {
-            m_accessor_enumerable = new t_cell_name_AccessorEnumerable(storage);
+            m_accessor_enumerable = new t_cell_name_AccessorEnumerable(storage, tx);
         }
 
         public IQueryable<TElement> CreateQuery<TElement>(Expression expression)
@@ -313,20 +319,20 @@ namespace t_Namespace
 
         public TResult Execute<TResult>(Expression expression)
         {
-            var  visitor              = new RewrittableWhereCaluseVisitor<t_cell_name_Accessor>(expression);
-            var  where_clauses        = visitor.RewrittableWhereClauses;
+            var  visitor              = new RewritableWhereCaluseVisitor<t_cell_name_Accessor>(expression);
+            var  where_clauses        = visitor.RewritableWhereClauses;
             var  queryable            = m_accessor_enumerable.AsQueryable<t_cell_name_Accessor>();
             var  trimmed_expression   = visitor.InjectEnumerator(expression, queryable, typeof(t_cell_name_Accessor_local_selector));
 
             if (where_clauses.Count != 0)
             {
-                var subject_rewritter           = new PredicateSubjectRewritter<t_cell_name_Accessor>();
-                Expression aggregated_predicate = subject_rewritter.Visit(where_clauses.First().Body);
+                var subject_rewriter           = new PredicateSubjectRewriter<t_cell_name_Accessor>();
+                Expression aggregated_predicate = subject_rewriter.Visit(where_clauses.First().Body);
 
                 foreach (var where_clause in where_clauses.Skip(1))
                 {
                     Expression predicate = where_clause.Body;
-                    aggregated_predicate = Expression.AndAlso(aggregated_predicate, subject_rewritter.Visit(predicate));
+                    aggregated_predicate = Expression.AndAlso(aggregated_predicate, subject_rewriter.Visit(predicate));
                 }
 
                 IndexQueryTreeGenerator<t_cell_name_Accessor> query_tree_gen       = new IndexQueryTreeGenerator<t_cell_name_Accessor>("t_cell_name", Index.s_AccessorSubstringIndexAccessMethod, is_cell: false);
@@ -340,7 +346,7 @@ namespace t_Namespace
                     m_accessor_enumerable.SetPositiveFiltering(query_tree_exec.Execute(query_tree));
                 }
 
-                m_accessor_enumerable.SetPredicate(aggregated_predicate, subject_rewritter.Parameter);
+                m_accessor_enumerable.SetPredicate(aggregated_predicate, subject_rewriter.Parameter);
             }
 
             if (trimmed_expression.NodeType == ExpressionType.Constant)
@@ -394,9 +400,9 @@ namespace t_Namespace
         private static  Type                             s_cell_type        = typeof(t_cell_name);
         private static  Type                             s_ienumerable_type = typeof(IEnumerable<>);
         private         t_cell_name_Enumerable           s_cell_enumerable;
-        internal t_cell_name_local_query_provider(LocalMemoryStorage storage)
+        internal t_cell_name_local_query_provider(LocalMemoryStorage storage, LocalTransactionContext tx)
         {
-            s_cell_enumerable = new t_cell_name_Enumerable(storage);
+            s_cell_enumerable = new t_cell_name_Enumerable(storage, tx);
         }
 
         public IQueryable<TElement> CreateQuery<TElement>(Expression expression)
@@ -413,20 +419,20 @@ namespace t_Namespace
 
         public TResult Execute<TResult>(Expression expression)
         {
-            var  visitor              = new RewrittableWhereCaluseVisitor<t_cell_name>(expression);
-            var  where_clauses        = visitor.RewrittableWhereClauses;
+            var  visitor              = new RewritableWhereCaluseVisitor<t_cell_name>(expression);
+            var  where_clauses        = visitor.RewritableWhereClauses;
             var  queryable            = s_cell_enumerable.AsQueryable<t_cell_name>();
             var  trimmed_expression   = visitor.InjectEnumerator(expression, queryable, typeof(t_cell_name_local_selector));
 
             if (where_clauses.Count != 0)
             {
-                var subject_rewritter           = new PredicateSubjectRewritter<t_cell_name>();
-                Expression aggregated_predicate = subject_rewritter.Visit(where_clauses.First().Body);
+                var subject_rewriter           = new PredicateSubjectRewriter<t_cell_name>();
+                Expression aggregated_predicate = subject_rewriter.Visit(where_clauses.First().Body);
 
                 foreach (var where_clause in where_clauses.Skip(1))
                 {
                     Expression predicate = where_clause.Body;
-                    aggregated_predicate = Expression.AndAlso(aggregated_predicate, subject_rewritter.Visit(predicate));
+                    aggregated_predicate = Expression.AndAlso(aggregated_predicate, subject_rewriter.Visit(predicate));
                 }
 
                 IndexQueryTreeGenerator<t_cell_name> query_tree_gen       = new IndexQueryTreeGenerator<t_cell_name>("t_cell_name", Index.s_CellSubstringIndexAccessMethod, is_cell: true);
@@ -440,7 +446,7 @@ namespace t_Namespace
                     s_cell_enumerable.SetPositiveFiltering(query_tree_exec.Execute(query_tree));
                 }
 
-                s_cell_enumerable.SetPredicate(aggregated_predicate, subject_rewritter.Parameter);
+                s_cell_enumerable.SetPredicate(aggregated_predicate, subject_rewriter.Parameter);
             }
 
             if (trimmed_expression.NodeType == ExpressionType.Constant)
@@ -504,10 +510,10 @@ namespace t_Namespace
 
         private t_cell_name_Accessor_local_selector() { /* nobody should reach this method */ }
 
-        internal t_cell_name_Accessor_local_selector(Trinity.Storage.LocalMemoryStorage storage)
+        internal t_cell_name_Accessor_local_selector(Trinity.Storage.LocalMemoryStorage storage, LocalTransactionContext tx)
         {
             this.query_expression              = Expression.Constant(this);
-            this.query_provider                = new t_cell_name_Accessor_local_query_provider(storage);
+            this.query_provider                = new t_cell_name_Accessor_local_query_provider(storage, tx);
         }
 
         internal unsafe t_cell_name_Accessor_local_selector(t_cell_name_Accessor_local_query_provider query_provider, Expression query_expression)
@@ -563,10 +569,10 @@ namespace t_Namespace
 
         private t_cell_name_local_selector() { /* nobody should reach this method */ }
 
-        internal t_cell_name_local_selector(Trinity.Storage.LocalMemoryStorage storage)
+        internal t_cell_name_local_selector(Trinity.Storage.LocalMemoryStorage storage, LocalTransactionContext tx)
         {
             this.query_expression              = Expression.Constant(this);
-            this.query_provider                = new t_cell_name_local_query_provider(storage);
+            this.query_provider                = new t_cell_name_local_query_provider(storage, tx);
         }
 
         internal unsafe t_cell_name_local_selector(t_cell_name_local_query_provider query_provider, Expression query_expression)
@@ -605,7 +611,7 @@ namespace t_Namespace
     #endregion//Public
     [END]
 
-    public static class LocalStorageCellSelectorExternsion
+    public static class LocalStorageCellSelectorExtension
     {
         [FOREACH]
         /// <summary>
@@ -615,7 +621,7 @@ namespace t_Namespace
         /// <returns>All the t_cell_name within the local memory storage.</returns>
         public static t_cell_name_local_selector t_cell_name_Selector(this LocalMemoryStorage storage)
         {
-            return new t_cell_name_local_selector(storage);
+            return new t_cell_name_local_selector(storage, null);
         }
 
         /// <summary>
@@ -625,7 +631,27 @@ namespace t_Namespace
         /// <returns>All the t_cell_name_Accessor within the local memory storage.</returns>
         public static t_cell_name_Accessor_local_selector t_cell_name_Accessor_Selector(this LocalMemoryStorage storage)
         {
-            return new t_cell_name_Accessor_local_selector(storage);
+            return new t_cell_name_Accessor_local_selector(storage, null);
+        }
+
+        /// <summary>
+        /// Enumerates all the t_cell_name within the local memory storage.
+        /// </summary>
+        /// <param name="storage">A <see cref="Trinity.Storage.LocalMemoryStorage"/> object.</param>
+        /// <returns>All the t_cell_name within the local memory storage.</returns>
+        public static t_cell_name_local_selector t_cell_name_Selector(this LocalMemoryStorage storage, LocalTransactionContext tx)
+        {
+            return new t_cell_name_local_selector(storage, tx);
+        }
+
+        /// <summary>
+        /// Enumerates all the t_cell_name_Accessor within the local memory storage.
+        /// </summary>
+        /// <param name="storage">A <see cref="Trinity.Storage.LocalMemoryStorage"/> object.</param>
+        /// <returns>All the t_cell_name_Accessor within the local memory storage.</returns>
+        public static t_cell_name_Accessor_local_selector t_cell_name_Accessor_Selector(this LocalMemoryStorage storage, LocalTransactionContext tx)
+        {
+            return new t_cell_name_Accessor_local_selector(storage, tx);
         }
         /**/
     }

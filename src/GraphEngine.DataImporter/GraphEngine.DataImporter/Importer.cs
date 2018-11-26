@@ -30,7 +30,7 @@ namespace GraphEngine.DataImporter
         internal static int s_current_batch_cnt = 0;
         internal static CmdOptions g_opts;
         #endregion
-        internal static void InitlalizeSchema(string tslAssembly)
+        internal static void InitializeSchema(string tslAssembly)
         {
             Global.LoadTSLStorageExtension(tslAssembly, ignoreNonIncrementalStorageSchemaChanges: true);
             s_cellTypes = new Dictionary<string, ICellDescriptor>();
@@ -50,7 +50,7 @@ namespace GraphEngine.DataImporter
 
             Global.LocalStorage.ResetStorage();
             g_opts = options;
-            InitlalizeSchema(tslAssembly);
+            InitializeSchema(tslAssembly);
 
             foreach (var file in files)
             {
@@ -128,17 +128,17 @@ namespace GraphEngine.DataImporter
                  {
                      save_otherwise_dispose = true;
                      remote_cell = Global.LocalStorage.NewGenericCell(rfd.TargetCellType);
-                     remote_cell.CellID = target_id;
+                     remote_cell.CellId = target_id;
                  }
 
                  var fd = remote_cell.GetFieldDescriptors().First(_ => _.Name == rfd.TargetFieldName);
                  if (fd.IsOfType<long>() || fd.IsOfType<string>())
                  {
-                     remote_cell.AppendToField(rfd.TargetFieldName, cell.CellID);
+                     remote_cell.AppendToField(rfd.TargetFieldName, cell.CellId);
                  }
                  else if (fd.IsOfType<int>())
                  {
-                     remote_cell.AppendToField(rfd.TargetFieldName, (int)cell.CellID);
+                     remote_cell.AppendToField(rfd.TargetFieldName, (int)cell.CellId);
                  }
                  else
                  {

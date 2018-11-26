@@ -16,29 +16,80 @@ namespace Trinity
     public enum TrinityErrorCode : int
     {
         /// <summary>
+        /// Indicates that the operation is not supported.
+        /// </summary>
+        E_NOTSUPPORTED          = -24,
+        /// <summary>
+        /// Indicates an entry-not-found failure.
+        /// </summary>
+        E_NOENTRY               = -23,
+        /// <summary>
+        /// Indicates a failure in module/component/etc. initialization.
+        /// </summary>
+        E_INIT_FAIL             = -22,
+        /// <summary>
+        /// Indicates that a managed exception is thrown.
+        /// Use this error code to propagate a managed exception
+        /// to unmanaged code, which may not be able to directly
+        /// catch managed exception.
+        /// </summary>
+        E_MANAGED_EXCEPTION     = -21,
+
+        /// <summary>
+        /// Indicates that an unload operation has failed.
+        /// </summary>
+        E_UNLOAD_FAIL           = -20,
+
+        /// <summary>
+        /// Indicates that a load operation has failed.
+        /// </summary>
+        E_LOAD_FAIL             = -19,
+
+        /// <summary>
         /// Indicates that a response message is too long.
         /// </summary>
-        E_MSG_OVERFLOW          = -15,
+        E_MSG_OVERFLOW          = -18,
+
         /// <summary>
         /// Indicates that the network subsystem has shut down.
+        E_NETWORK_SHUTDOWN      = -17,   
+        
         /// </summary>
-        E_NETWORK_SHUTDOWN      = -14,
+        /// <summary>
+        /// Indicates too many recursive cell locks, leading to overflow.
+        /// </summary>
+        E_CELL_LOCK_OVERFLOW    = -16,
+
+        /// <summary>
+        /// Indicates a timeout.
+        /// </summary>
+        E_TIMEOUT               = -15,
+
+        /// <summary>
+        /// Indicates deadlocks. 
+        /// </summary>
+        E_DEADLOCK              = -14,
+
         /// <summary>
         /// Indicates a remote message handler exception.
         /// </summary>
         E_RPC_EXCEPTION         = -13,
+
         /// <summary>
         /// Indicates memory allocation failure.
         /// </summary>
         E_NOMEM                 = -12,
+
         /// <summary>
         /// Represents network receiving failure.
         /// </summary>
         E_NETWORK_RECV_FAILURE  = -11,
+
         /// <summary>
         /// Indicates that write operation is done on a readonly storage.
         /// </summary>
         E_READONLY              = -10,
+
         /// <summary>
         /// Indicates invalid arguments when calling a method.
         /// </summary>
@@ -93,5 +144,10 @@ namespace Trinity
         /// Represents a status that an expected cell is found.
         /// </summary>
         E_CELL_FOUND = 1,
+
+        /// <summary>
+        /// Represents a status that an enumerator has finished enumerating items and reached the end.
+        /// </summary>
+        E_ENUMERATION_END = 2,
     }
 }

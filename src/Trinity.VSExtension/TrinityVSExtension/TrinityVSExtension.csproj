@@ -1,5 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="12.0">
+  <Import Project="..\packages\Microsoft.VSSDK.BuildTools.15.8.3252\build\Microsoft.VSSDK.BuildTools.props" Condition="Exists('..\packages\Microsoft.VSSDK.BuildTools.15.8.3252\build\Microsoft.VSSDK.BuildTools.props')" />
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Release</Configuration>
@@ -34,6 +35,8 @@
     <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
     <UseApplicationTrust>false</UseApplicationTrust>
     <BootstrapperEnabled>true</BootstrapperEnabled>
+    <NuGetPackageImportStamp>
+    </NuGetPackageImportStamp>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Microsoft.Build.Engine" />
@@ -184,46 +187,38 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="..\..\..\bin\GraphEngine.Azure.BlobStorage.1.0.9083.nupkg">
-      <Link>Packages\GraphEngine.Azure.BlobStorage.1.0.9083.nupkg</Link>
+    <Content Include="$(OutputPath)GraphEngine.Azure.BlobStorage.$(DOTNET_PACKAGE_VERSION).nupkg">
+      <Link>Packages\GraphEngine.Azure.BlobStorage.$(DOTNET_PACKAGE_VERSION).nupkg</Link>
       <IncludeInVSIX>true</IncludeInVSIX>
       <VSIXSubPath>Packages</VSIXSubPath>
     </Content>
-    <Content Include="..\..\..\bin\GraphEngine.Client.1.0.9083.nupkg">
-      <Link>Packages\GraphEngine.Client.1.0.9083.nupkg</Link>
+    <Content Include="$(OutputPath)GraphEngine.Client.$(DOTNET_PACKAGE_VERSION).nupkg">
+      <Link>Packages\GraphEngine.Client.$(DOTNET_PACKAGE_VERSION).nupkg</Link>
       <IncludeInVSIX>true</IncludeInVSIX>
       <VSIXSubPath>Packages</VSIXSubPath>
     </Content>
-    <Content Include="..\..\..\bin\GraphEngine.Core.1.0.9083.nupkg">
-      <Link>Packages\GraphEngine.Core.1.0.9083.nupkg</Link>
+    <Content Include="$(OutputPath)GraphEngine.Core.$(DOTNET_PACKAGE_VERSION).nupkg">
+      <Link>Packages\GraphEngine.Core.$(DOTNET_PACKAGE_VERSION).nupkg</Link>
       <IncludeInVSIX>true</IncludeInVSIX>
       <VSIXSubPath>Packages</VSIXSubPath>
     </Content>
-    <Content Include="..\..\..\bin\GraphEngine.DynamicCluster.1.0.9083.nupkg">
-      <Link>Packages\GraphEngine.DynamicCluster.1.0.9083.nupkg</Link>
+    <Content Include="$(OutputPath)GraphEngine.DynamicCluster.$(DOTNET_PACKAGE_VERSION).nupkg">
+      <Link>Packages\GraphEngine.DynamicCluster.$(DOTNET_PACKAGE_VERSION).nupkg</Link>
       <IncludeInVSIX>true</IncludeInVSIX>
       <VSIXSubPath>Packages</VSIXSubPath>
     </Content>
-    <Content Include="..\..\..\bin\GraphEngine.FFI.1.0.9083.nupkg">
-      <Link>Packages\GraphEngine.FFI.1.0.9083.nupkg</Link>
+    <Content Include="$(OutputPath)GraphEngine.LIKQ.$(DOTNET_PACKAGE_VERSION).nupkg">
+      <Link>Packages\GraphEngine.LIKQ.$(DOTNET_PACKAGE_VERSION).nupkg</Link>
       <IncludeInVSIX>true</IncludeInVSIX>
       <VSIXSubPath>Packages</VSIXSubPath>
     </Content>
-    <Content Include="..\..\..\bin\GraphEngine.FFI.Python.1.0.9083.nupkg">
-      <Link>Packages\GraphEngine.FFI.Python.1.0.9083.nupkg</Link>
+    <Content Include="$(OutputPath)GraphEngine.Storage.Composite.$(DOTNET_PACKAGE_VERSION).nupkg">
+      <Link>Packages\GraphEngine.Storage.Composite.$(DOTNET_PACKAGE_VERSION).nupkg</Link>
       <IncludeInVSIX>true</IncludeInVSIX>
       <VSIXSubPath>Packages</VSIXSubPath>
     </Content>
-    <Content Include="..\..\..\bin\GraphEngine.LIKQ.1.0.9083.nupkg">
-      <Link>Packages\GraphEngine.LIKQ.1.0.9083.nupkg</Link>
-      <IncludeInVSIX>true</IncludeInVSIX>
-      <VSIXSubPath>Packages</VSIXSubPath>
-    </Content>
-    <Content Include="..\..\..\bin\GraphEngine.Storage.Composite.1.0.9083.nupkg">
-      <Link>Packages\GraphEngine.Storage.Composite.1.0.9083.nupkg</Link>
-      <IncludeInVSIX>true</IncludeInVSIX>
-      <VSIXSubPath>Packages</VSIXSubPath>
-    </Content>
+    <None Include="app.config" />
+    <None Include="packages.config" />
     <None Include="source.extension.vsixmanifest">
       <SubType>Designer</SubType>
     </None>
@@ -315,7 +310,6 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x86'">
     <DebugSymbols>true</DebugSymbols>
-    <OutputPath>$(SolutionDir)..\..\bin\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <DebugType>full</DebugType>
@@ -324,7 +318,6 @@
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x86'">
-    <OutputPath>$(SolutionDir)..\..\bin\</OutputPath>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Optimize>true</Optimize>
     <DebugType>pdbonly</DebugType>
@@ -352,4 +345,12 @@
     <PostBuildEvent>
     </PostBuildEvent>
   </PropertyGroup>
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('..\packages\Microsoft.VSSDK.BuildTools.15.8.3252\build\Microsoft.VSSDK.BuildTools.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.VSSDK.BuildTools.15.8.3252\build\Microsoft.VSSDK.BuildTools.props'))" />
+    <Error Condition="!Exists('..\packages\Microsoft.VSSDK.BuildTools.15.8.3252\build\Microsoft.VSSDK.BuildTools.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.VSSDK.BuildTools.15.8.3252\build\Microsoft.VSSDK.BuildTools.targets'))" />
+  </Target>
+  <Import Project="..\packages\Microsoft.VSSDK.BuildTools.15.8.3252\build\Microsoft.VSSDK.BuildTools.targets" Condition="Exists('..\packages\Microsoft.VSSDK.BuildTools.15.8.3252\build\Microsoft.VSSDK.BuildTools.targets')" />
 </Project>

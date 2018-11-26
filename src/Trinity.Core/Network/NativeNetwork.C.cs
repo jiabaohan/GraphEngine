@@ -20,16 +20,6 @@ namespace Trinity.Network
         internal static extern int StartSocketServer(UInt16 port);
         [DllImport(TrinityC.AssemblyName)]
         internal static extern int StopSocketServer();
-        [DllImport(TrinityC.AssemblyName)]
-        internal static extern int ShutdownSocketServer();
-        [DllImport(TrinityC.AssemblyName)]
-        internal static extern void AwaitRequest(out void* pContext);
-        [DllImport(TrinityC.AssemblyName)]
-        internal static extern void SendResponse(void* pContext);
-        [DllImport(TrinityC.AssemblyName)]
-        internal static extern void EnterSocketServerThreadPool();
-        [DllImport(TrinityC.AssemblyName)]
-        internal static extern void ExitSocketServerThreadPool();
         #endregion
 
         #region Client

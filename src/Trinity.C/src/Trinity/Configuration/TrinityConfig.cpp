@@ -10,7 +10,6 @@
 namespace TrinityConfig
 {
     String storage_root           = "";
-    String log_directory          = "";
     bool read_only                = false;
     bool handshake                = true;
     bool client_disable_sndbuffer = false;
@@ -42,18 +41,6 @@ namespace TrinityConfig
     {
         storage_root = storageRoot;
         Diagnostics::WriteLine(LogLevel::Verbose, "StorageRoot set to {0}", storage_root);
-    }
-
-    String LogDirectory()
-    {
-        if (log_directory.Empty())
-            log_directory = Path::CompletePath(Path::Combine(Path::MyAssemblyPath(), "trinity-log"), true);
-        return log_directory;
-    }
-
-    void SetLogDirectory(String logDir)
-    {
-        log_directory = logDir;
     }
 
     void SetGCDefragInterval(int32_t interval)
@@ -235,7 +222,7 @@ DLL_EXPORT BOOL    CHandshake() { return TrinityConfig::Handshake() ? TRUE : FAL
 DLL_EXPORT VOID    CSetHandshake(bool value) { TrinityConfig::SetHandshake(value); }
 DLL_EXPORT BOOL    CClientDisableSendBuffer() { return TrinityConfig::ClientDisableSendBuffer() ? TRUE : FALSE; }
 DLL_EXPORT VOID    CSetClientDisableSendBuffer(bool value) { TrinityConfig::SetClientDisableSendBuffer(value); }
-DLL_EXPORT VOID    SetStorageRoot(const char* buffer, int32_t length) { TrinityConfig::SetStorageRoot(String::FromWcharArray((u16char*)buffer, length >> 1)); }
+DLL_EXPORT VOID    SetStorageRoot(const u16char* buffer, int32_t length) { TrinityConfig::SetStorageRoot(String::FromWcharArray(buffer, length >> 1)); }
 DLL_EXPORT BOOL    CReadOnly() { return TrinityConfig::ReadOnly() ? TRUE : FALSE; }
 DLL_EXPORT void    CSetReadOnly(bool value) { TrinityConfig::SetReadOnly(value); }
 DLL_EXPORT int32_t CTrunkCount() { return TrinityConfig::TrunkCount(); }

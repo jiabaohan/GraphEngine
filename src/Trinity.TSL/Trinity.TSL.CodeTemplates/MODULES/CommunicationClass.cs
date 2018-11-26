@@ -88,7 +88,7 @@ namespace t_Namespace
         {
             var rsp = new t_protocol_responseWriter();
             t_protocol_nameHandler(new t_protocol_requestReader(args.Buffer, args.Offset), rsp);
-            *(int*)(rsp.CellPtr - TrinityProtocol.MsgHeader) = rsp.Length + TrinityProtocol.TrinityMsgHeader;
+            *(int*)(rsp.m_ptr - TrinityProtocol.MsgHeader) = rsp.Length + TrinityProtocol.TrinityMsgHeader;
             args.Response = new TrinityMessage(rsp.buffer, rsp.Length + TrinityProtocol.MsgHeader);
         }
 
@@ -98,7 +98,7 @@ namespace t_Namespace
         {
             var rsp = new t_protocol_responseWriter();
             t_protocol_nameHandler(rsp);
-            *(int*)(rsp.CellPtr - TrinityProtocol.MsgHeader) = rsp.Length + TrinityProtocol.TrinityMsgHeader;
+            *(int*)(rsp.m_ptr - TrinityProtocol.MsgHeader) = rsp.Length + TrinityProtocol.TrinityMsgHeader;
             args.Response = new TrinityMessage(rsp.buffer, rsp.Length + TrinityProtocol.MsgHeader);
         }
 
@@ -117,10 +117,10 @@ namespace t_Namespace
                 int from = *(int*)(args.Buffer + args.Offset + sizeof(int));
                 _t_protocol_name_CheckError(exception, token, from);
                 *(int*)(rsp.buffer) = TrinityProtocol.TrinityMsgHeader + TrinityProtocol.AsyncWithRspAdditionalHeaderLength + rsp.Length;
-                *(rsp.buffer + TrinityProtocol.MsgTypeOffset) = (byte)TrinityMessageType.ASYNC_WITH_RSP;
+                *(TrinityMessageType*)(rsp.buffer + TrinityProtocol.MsgTypeOffset) = TrinityMessageType.ASYNC_WITH_RSP;
                 *(ushort*)(rsp.buffer + TrinityProtocol.MsgIdOffset) = (ushort)global::t_Namespace.TSL.t_base_class_name.t_comm_name.t_protocol_typeMessageType.t_protocol_name__Response;
-                *(int*)(rsp.CellPtr - TrinityProtocol.AsyncWithRspAdditionalHeaderLength) = token;
-                *(int*)(rsp.CellPtr - TrinityProtocol.AsyncWithRspAdditionalHeaderLength + sizeof(int)) = 0;
+                *(int*)(rsp.m_ptr - TrinityProtocol.AsyncWithRspAdditionalHeaderLength) = token;
+                *(int*)(rsp.m_ptr - TrinityProtocol.AsyncWithRspAdditionalHeaderLength + sizeof(int)) = 0;
                 IF("node->type() == PGT_MODULE");
                 this.SendMessage(m_memorycloud[from], rsp.buffer, rsp.Length + TrinityProtocol.MsgHeader + TrinityProtocol.AsyncWithRspAdditionalHeaderLength);
                 ELSE();
@@ -143,10 +143,10 @@ namespace t_Namespace
                 int from = *(int*)(args.Buffer + args.Offset + sizeof(int));
                 _t_protocol_name_CheckError(exception, token, from);
                 *(int*)(rsp.buffer) = TrinityProtocol.TrinityMsgHeader + TrinityProtocol.AsyncWithRspAdditionalHeaderLength + rsp.Length;
-                *(rsp.buffer + TrinityProtocol.MsgTypeOffset) = (byte)TrinityMessageType.ASYNC_WITH_RSP;
+                *(TrinityMessageType*)(rsp.buffer + TrinityProtocol.MsgTypeOffset) = TrinityMessageType.ASYNC_WITH_RSP;
                 *(ushort*)(rsp.buffer + TrinityProtocol.MsgIdOffset) = (ushort)global::t_Namespace.TSL.t_base_class_name.t_comm_name.t_protocol_typeMessageType.t_protocol_name__Response;
-                *(int*)(rsp.CellPtr - TrinityProtocol.AsyncWithRspAdditionalHeaderLength) = token;
-                *(int*)(rsp.CellPtr - TrinityProtocol.AsyncWithRspAdditionalHeaderLength + sizeof(int)) = 0;
+                *(int*)(rsp.m_ptr - TrinityProtocol.AsyncWithRspAdditionalHeaderLength) = token;
+                *(int*)(rsp.m_ptr - TrinityProtocol.AsyncWithRspAdditionalHeaderLength + sizeof(int)) = 0;
                 IF("node->type() == PGT_MODULE");
                 this.SendMessage(m_memorycloud[from], rsp.buffer, rsp.Length + TrinityProtocol.MsgHeader + TrinityProtocol.AsyncWithRspAdditionalHeaderLength);
                 ELSE();
@@ -171,7 +171,7 @@ namespace t_Namespace
             fixed (byte* p = rsp)
             {
                 *(int*)(p) = TrinityProtocol.TrinityMsgHeader + TrinityProtocol.AsyncWithRspAdditionalHeaderLength;
-                *(p + TrinityProtocol.MsgTypeOffset) = (byte)TrinityMessageType.ASYNC_WITH_RSP;
+                *(TrinityMessageType*)(p + TrinityProtocol.MsgTypeOffset) = TrinityMessageType.ASYNC_WITH_RSP;
                 *(ushort*)(p + TrinityProtocol.MsgIdOffset) = (ushort)global::t_Namespace.TSL.t_base_class_name.t_comm_name.t_protocol_typeMessageType.t_protocol_name__Response;
                 *(int*)(p + TrinityProtocol.MsgHeader) = token;
                 *(int*)(p + TrinityProtocol.MsgHeader + sizeof(int)) = -1;
@@ -234,7 +234,7 @@ namespace t_Namespace
         {
         }
 
-        public int CellPtr { get; internal set; }
+        public int m_ptr { get; internal set; }
         public int Length { get; internal set; }
 
         public void Dispose()

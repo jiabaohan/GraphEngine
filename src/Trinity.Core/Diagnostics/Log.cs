@@ -94,21 +94,45 @@ namespace Trinity.Diagnostics
         private static IFormatProvider s_InternalFormatProvider;
         private const  int             c_LogEntryCollectorIdleInterval = 3000;
         private const  int             c_LogEntryCollectorBusyInterval = 50;
+        private static object          s_init_lock = new object();
+        private static bool            s_initialized = false;
+        private static bool            s_logtofile = false;
+        private static BackgroundTask  s_bgtask;
+        private static readonly char[] s_linebreaks = "\r\n".ToCharArray();
         #endregion
 
         static Log()
         {
             TrinityC.Init();
-            try
-            {
-                TrinityConfig.LoadTrinityConfig();
-            }
-            catch
-            {
-                Log.WriteLine(LogLevel.Error, "Failure to load config file, falling back to default log behavior");
-            }
+            Initialize();
+        }
 
-            BackgroundThread.AddBackgroundTask(new BackgroundTask(CollectLogEntries, c_LogEntryCollectorIdleInterval));
+        internal static void Initialize()
+        {
+            lock (s_init_lock)
+            {
+                if (s_initialized) return;
+                TrinityConfig.EnsureConfig();
+                LoggingConfig.Instance.LogEchoOnConsole = LoggingConfig.Instance.LogEchoOnConsole; //force sync the lazy value
+                CLogInitialize();
+                s_bgtask = new BackgroundTask(CollectLogEntries, c_LogEntryCollectorIdleInterval);
+                BackgroundThread.AddBackgroundTask(s_bgtask);
+                s_initialized = true;
+                s_logtofile = LoggingConfig.Instance.LogToFile;
+                SetLogDirectory(LoggingConfig.Instance.LogDirectory);
+            }
+        }
+
+        internal static void Uninitialize()
+        {
+            lock (s_init_lock)
+            {
+                if (!s_initialized) return;
+                BackgroundThread.RemoveBackgroundTask(s_bgtask);
+                s_bgtask = null;
+                CLogUninitialize();
+                s_initialized = false;
+            }
         }
 
         [StructLayout(LayoutKind.Sequential)]
@@ -151,40 +175,6 @@ namespace Trinity.Diagnostics
                 c_LogEntryCollectorIdleInterval;
         }
 
-        private static void _unitTestLogEchoThread(object param)
-        {
-            string filename = (string)param;
-
-            try
-            {
-                var stream = File.Open(filename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-                var reader = new StreamReader(stream);
-                while (true)
-                {
-                    try
-                    {
-                        var line = reader.ReadLine();
-                        if(line != null) 
-                        {
-                            line = line.Trim();
-                            if (line != "")
-                                Console.WriteLine(line);
-                            else
-                                Thread.Sleep(10);
-                        }
-                        else
-                        {
-                            Thread.Sleep(100);
-                        }
-                        
-                    }
-                    catch { Thread.Sleep(500); }
-                }
-            }
-            catch
-            { Console.WriteLine("Failed to open log file {0}", filename); }
-        }
-
         /// <summary>
         /// The event fires when new log entries are written.
         /// </summary>
@@ -222,6 +212,17 @@ namespace Trinity.Diagnostics
         }
 
         /// <summary>
+        /// Breaks the text into lines, and log the lines sequentially.
+        /// </summary>
+        /// <param name="lines">Represents the text to be split into lines</param>
+        public static void WriteLines(string lines)
+        {
+            lines.Split(s_linebreaks, StringSplitOptions.RemoveEmptyEntries)
+                 .ToList()
+                 .ForEach(_ => WriteLine("{0}", _));
+        }
+
+        /// <summary>
         /// Writes the text representation of the specified array of objects, followed by the current line terminator, to the log using the specified format information at the specified logging level.
         /// </summary>
         /// <param name="logLevel">The logging level at which the message is written.</param>
@@ -229,7 +230,31 @@ namespace Trinity.Diagnostics
         /// <param name="arg">An array of objects to write using format.</param>
         public static unsafe void WriteLine(LogLevel logLevel, string format = "", params object[] arg)
         {
-            CLogWriteLine((int)logLevel, string.Format(FormatProvider, format, arg));
+            string log = (arg == null || arg.Length == 0) ? format : string.Format(FormatProvider, format, arg);
+            CLogWriteLine((int)logLevel, log);
+        }
+
+        // called by logging config
+        internal static void SetLogDirectory(string dir)
+        {
+            lock (s_init_lock)
+            {
+                if (!s_initialized) return;
+                if (!s_logtofile) return;
+                WriteLine(LogLevel.Info, $"{nameof(Log)}: changing logging directory to {dir}.");
+                // only notify c-logger when it's already initialized
+                // and we have to close the current log file
+                CLogOpenFile(dir);
+            }
+        }
+
+        internal static void SetLogToFile(bool value)
+        {
+            lock (s_init_lock)
+            {
+                s_logtofile = value;
+                if (!value) CLogCloseFile();
+            }
         }
 
         private static IFormatProvider FormatProvider
@@ -245,12 +270,23 @@ namespace Trinity.Diagnostics
             }
         }
 
-
         [DllImport(TrinityC.AssemblyName, CharSet = CharSet.Unicode)]
         private static extern unsafe void CLogWriteLine(int level, string p_buf);
 
         [DllImport(TrinityC.AssemblyName)]
         private static extern void CLogFlush();
+
+        [DllImport(TrinityC.AssemblyName)]
+        private static extern unsafe void CLogInitialize();
+
+        [DllImport(TrinityC.AssemblyName)]
+        private static extern unsafe void CLogUninitialize();
+
+        [DllImport(TrinityC.AssemblyName, CharSet = CharSet.Unicode)]
+        private static extern unsafe void CLogOpenFile(string logdir);
+
+        [DllImport(TrinityC.AssemblyName)]
+        private static extern unsafe void CLogCloseFile();
 
         [DllImport(TrinityC.AssemblyName, CharSet = CharSet.Unicode)]
         private static extern TrinityErrorCode CLogCollectEntries(

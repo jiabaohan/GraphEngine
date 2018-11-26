@@ -94,7 +94,7 @@ public static class FanoutSearchDescriptorEvaluator
             return obj as T;
         }
 
-        private class FanoutSearchActionRewritter : CSharpSyntaxRewriter
+        private class FanoutSearchActionRewriter : CSharpSyntaxRewriter
         {
             public override SyntaxNode VisitMemberAccessExpression(MemberAccessExpressionSyntax node)
             {
@@ -174,7 +174,7 @@ public static class FanoutSearchDescriptorEvaluator
                     visitNode  = fs_callchain[idx];
                     if (visitNode.Method == s_LIKQ_FollowEdge)
                     {
-                        // two consequtive FollowEdge, use default traverse action.
+                        // two consecutive FollowEdge, use default traverse action.
                         --idx;
                         visitNode = null;
                     }
@@ -238,7 +238,7 @@ public static class FanoutSearchDescriptorEvaluator
             }
             else
             {
-                goto throw_invalid_element_type;
+                throw new LambdaDSLSyntaxErrorException("Invalid collection element type", collectionSyntax);
             }
 
             switch (collectionSyntax.Kind())
@@ -269,14 +269,23 @@ public static class FanoutSearchDescriptorEvaluator
 
             foreach (var element in initializer.Expressions)
             {
-                var literal = Get<LiteralExpressionSyntax>(element);
-                ThrowIf(!literal.IsKind(element_literal_kind), "Invalid collection element type", literal);
-                yield return (T)(dynamic)literal.Token.Value;
+                switch (element)
+                {
+                    case LiteralExpressionSyntax literal:
+                    ThrowIf(!literal.IsKind(element_literal_kind), "Invalid collection element type", literal);
+                    yield return (T)(dynamic)literal.Token.Value;
+                    break;
+                    case PrefixUnaryExpressionSyntax puliteral:
+                    ThrowIf(!puliteral.IsKind(SyntaxKind.UnaryMinusExpression), "Invalid unary expression", puliteral);
+                    ThrowIf(!puliteral.OperatorToken.IsKind(SyntaxKind.MinusToken), "Invalid unary prefix operator", puliteral);
+                    ThrowIf(!puliteral.Operand.IsKind(element_literal_kind), "Invalid unary operand", puliteral);
+                    yield return (T)(dynamic)Get<LiteralExpressionSyntax>(puliteral.Operand).Token.Value;
+                    break;
+                    default:
+                    throw new LambdaDSLSyntaxErrorException("Invalid collection element type", collectionSyntax);
+                }
             }
             yield break;
-
-            throw_invalid_element_type:
-            throw new LambdaDSLSyntaxErrorException("Invalid collection element type", collectionSyntax);
         }
 
         private static Expression<Func<ICellAccessor, Action>> ConstructVisitNodeAction(ExpressionSyntax traverseAction)
@@ -309,7 +318,7 @@ public static class FanoutSearchDescriptorEvaluator
                 if (lambda_expression == null) goto throw_badtype;
 
                 // FanoutSearch.Action is ambiguous with with System.Action
-                var action_visitor = new FanoutSearchActionRewritter();
+                var action_visitor = new FanoutSearchActionRewriter();
                 lambda_expression = action_visitor.Visit(lambda_expression) as LambdaExpressionSyntax;
 
                 ScriptOptions scriptOptions = ScriptOptions.Default;

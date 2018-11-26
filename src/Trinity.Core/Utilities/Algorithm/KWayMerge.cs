@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.IO;
+using Trinity.Diagnostics;
 
 namespace Trinity.Utilities
 {
@@ -125,11 +126,11 @@ namespace Trinity.Utilities
                 }
                 if (count % 1000000 == 0)
                 {
-                    Console.WriteLine(count);
+                    Log.WriteLine($"{count}");
                 }
             }
 
-            #region Cleanning
+            #region Cleaning
             for (int i = 0; i < k; i++)
             {
                 br_array[i].Close();

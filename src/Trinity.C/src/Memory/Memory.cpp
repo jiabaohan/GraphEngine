@@ -12,6 +12,9 @@
 #include <sys/ptrace.h>
 #endif
 
+using Trinity::Diagnostics::LogLevel;
+using Trinity::Diagnostics::WriteLine;
+
 namespace Memory
 {
     uint64_t LargePageMinimum = 2097152; //2M
@@ -27,7 +30,7 @@ namespace Memory
         DWORD old = 0;
         if (!VirtualProtectEx(GetCurrentProcess(), targetPtr, sizeof(uint64_t), PAGE_READWRITE, &old))
         {
-            Console::WriteLine("Failed to change the memory page to PAGE_READWRITE\n");
+            WriteLine(LogLevel::Error, "Failed to change the memory page to PAGE_READWRITE\n");
             return FALSE;
         }
         if (WriteProcessMemory(GetCurrentProcess(), (LPVOID)targetPtr, (LPVOID)&targetValue, sizeof(LPVOID), &bytesWritten))
@@ -36,7 +39,7 @@ namespace Memory
         }
         else
         {
-            Console::WriteLine("Failed to write to process memory.\n");
+            WriteLine(LogLevel::Error, "Failed to write to process memory.\n");
             return FALSE;
         }
 #else
@@ -51,7 +54,7 @@ namespace Memory
         }
         else
         {
-            Console::WriteLine("Failed to change the memory page to PAGE_READWRITE\n");
+            WriteLine(LogLevel::Error, "Failed to change the memory page to PAGE_READWRITE\n");
             return FALSE;
         }
 #endif
@@ -143,32 +146,53 @@ namespace Memory
 
     /***************************************
 
-    From MSDN:
-    An attempt to commit a page that is
-    already committed does not cause the
-    function to fail. This means that you
-    can commit pages without first determining
-    the current commitment state of each page.
+    MSDN:
+    An attempt to commit a page that is already committed does not cause 
+    the function to fail. This means that you can commit pages without 
+    first determining the current commitment state of each page.
 
-    ***************************************/
+    MemoryCommit adds the specified address range to the committed memory 
+    set with read-write permissions, and then zeros the region.
+
+    ------------------------------------------
+
+    LINUX MPROTECT(2):
+    Changes protection for the memory range [addr, addr+len-1]
+
+    Note, addr should be aligned to system page, and thus in our
+    case we should "overcommit" the range [ addr aligned to page, addr ].
+
+    *****************************************/
+
     void * MemoryCommit(void * buf, uint64_t size)
     {
 #if defined(TRINITY_PLATFORM_WINDOWS)
         //Commit the desired size, the actually allocated space will be larger(up to a whole page) than the desired size.
         return VirtualAlloc(buf, size, MEM_COMMIT, PAGE_READWRITE);
 #else
-        return mprotect(buf, size, PROT_READ | PROT_WRITE) == 0 ? buf : NULL;
+        uint64_t makeup_size = PAGE_RANGE_64 & (uint64_t)buf;
+        void*    buf_aligned = (void*)(PAGE_MASK_64 & (uint64_t)buf);
+
+        if (0 == mprotect(buf_aligned , size + makeup_size, PROT_READ | PROT_WRITE))
+        {
+            memset(buf, 0, size);
+            return buf;
+        }
+        else 
+        {
+            return NULL;
+        }
 #endif
     }
 
     char * ReserveAlloc(uint64_t reserved_size, uint64_t alloc_size)
     {
+        uint64_t size = RoundUpToPage_64(alloc_size);
 #if defined(TRINITY_PLATFORM_WINDOWS)
         void* buf = VirtualAlloc(NULL, reserved_size, MEM_RESERVE/* | MEM_LARGE_PAGES */, PAGE_READWRITE);
         if (buf == NULL)//allocation failed
             return NULL;
 
-        uint64_t size = (alloc_size + PAGE_RANGE) & PAGE_MASK;
         //Commit the desired size, the actually allocated space will be larger(up to a whole page) than the desired size.
         void* alloc_buf = VirtualAlloc(buf, size, MEM_COMMIT, PAGE_READWRITE);
         if (alloc_buf == NULL)
@@ -181,7 +205,6 @@ namespace Memory
         void * p = mmap(NULL, reserved_size, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
         if (MAP_FAILED == p)
             return NULL;
-        uint64_t size = (alloc_size + PAGE_RANGE) & PAGE_MASK;
         if (mprotect(p, size, PROT_READ | PROT_WRITE) == 0)
             return (char*)p;
         else
@@ -280,7 +303,7 @@ namespace Memory
         memoryStatus.dwLength = sizeof(memoryStatus);
         if (!GlobalMemoryStatusEx(&memoryStatus))
         {
-            Console::WriteLine("Get GlobalMemoryStatus: {0}\n", GetLastError());
+            WriteLine(LogLevel::Error, "Get GlobalMemoryStatus: {0}\n", GetLastError());
             return;
         }
 
@@ -290,7 +313,7 @@ namespace Memory
         {
             if (max_wsz <= WorkingSetDecreaseStep)
             {
-                Console::WriteLine("Increasing working set size failed.\r\n");
+                WriteLine(LogLevel::Error, "Increasing working set size failed.\r\n");
                 break;
             }
 
@@ -342,7 +365,7 @@ namespace Memory
         DWORD WSFlag = 0;
 
         GetProcessWorkingSetSizeEx(::GetCurrentProcess(), &MinSize, &MaxSize, &WSFlag);
-        Console::WriteLine("%Iu, %Iu, %Iu", MinSize, MaxSize, WSFlag);*/
+        WriteLine("%Iu, %Iu, %Iu", MinSize, MaxSize, WSFlag);*/
 #endif
     }
 
@@ -358,7 +381,7 @@ namespace Memory
         {
             if (max_wsz <= WorkingSetDecreaseStep)
             {
-                Console::WriteLine("Increasing working set size failed.\r\n");
+                WriteLine(LogLevel::Error, "Increasing working set size failed.\r\n");
                 break;
             }
 
@@ -384,7 +407,7 @@ namespace Memory
     {
 #if defined(TRINITY_PLATFORM_WINDOWS)
         GetProcessWorkingSetSizeEx(::GetCurrentProcess(), &MinWorkingSet, &MaxWorkingSet, (PDWORD)&WorkingSetFlag);
-        //Console::WriteLine("MinWorkingSet: %Iu, MaxWorkingSet: %Iu, WorkingSetFlag: %Iu\n", MinWorkingSet, MaxWorkingSet, WorkingSetFlag);
+        //WriteLine("MinWorkingSet: %Iu, MaxWorkingSet: %Iu, WorkingSetFlag: %Iu\n", MinWorkingSet, MaxWorkingSet, WorkingSetFlag);
 #endif
     }
 
@@ -414,7 +437,7 @@ namespace Memory
         DWORD WSFlag = 0;
 
         GetProcessWorkingSetSizeEx(::GetCurrentProcess(), &MinSize, &MaxSize, &WSFlag);
-        Console::WriteLine("%Iu, %Iu, %Iu", MinSize, MaxSize, WSFlag);*/
+        WriteLine("%Iu, %Iu, %Iu", MinSize, MaxSize, WSFlag);*/
 #endif
     }
 
@@ -434,13 +457,13 @@ namespace Memory
         return (NULL != MemoryCommit(p, size_to_expand));
     }
 
-    void FreeMemoryRegion(char* trunkPtr, uint64_t size)
+    void FreeMemoryRegion(void* lpaddress, uint64_t size)
     {
 #if defined(TRINITY_PLATFORM_WINDOWS)
         /* size is unused */
-        VirtualFree(trunkPtr, 0, MEM_RELEASE);
+        VirtualFree(lpaddress, 0, MEM_RELEASE);
 #else
-        munmap(trunkPtr, size);
+        munmap(lpaddress, size);
 #endif
     }
 
@@ -516,12 +539,12 @@ namespace Memory
 #if !defined(TRINITY_PLATFORM_WINDOWS)
     bool VirtualLock(void* addr, size_t size)
     {
-        Trinity::Diagnostics::WriteLine(Trinity::Diagnostics::LogLevel::Error, "VirtualLock: Windows only.");
+        WriteLine(LogLevel::Error, "VirtualLock: Windows only.");
         return false;
     }
     bool VirtualUnlock(void* addr, size_t size) 
     { 
-        Trinity::Diagnostics::WriteLine(Trinity::Diagnostics::LogLevel::Error, "VirtualUnlock: Windows only.");
+        WriteLine(LogLevel::Error, "VirtualUnlock: Windows only.");
         return false;
     }
 #endif

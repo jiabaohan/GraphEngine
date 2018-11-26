@@ -5,7 +5,7 @@
 *   (Dependencies are defined by GraphEngine.Core.props.  Be sure to import that first)
 *
 *   User-Defines:
-*     @TslCodegen         : A tsl file to compile
+*     @TslCodegen         : One or more tsl files to compile
 *     $TslOutputPath      : Output directory for the generated files, by default IntermediateOutputPath
 *
 -->
@@ -14,8 +14,9 @@
   <PropertyGroup>
     <!--This property is used as OutputPath parameter in TSL_COMPILER_TASK-->
     <TslOutputPath Condition=" '$(TslOutputPath)' == '' ">$(IntermediateOutputPath)</TslOutputPath>
-    <!--This property is used to specify the location of the genreated source code-->
-    <TslGeneratedCodePath Condition=" '$(TslGeneratedCodePath)' == '' ">$(TslOutputPath)GeneratedCode\</TslGeneratedCodePath>
+    <!--This property is used to specify the location of the generated source code-->
+    <!--Note, generated code path is hardcoded as TslOutputPath/GeneratedCode in the codegen.-->
+    <TslGeneratedCodePath>$(TslOutputPath)GeneratedCode\</TslGeneratedCodePath>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(TslDebugArguments)' == ''">
@@ -25,6 +26,13 @@
 
   <ItemGroup>
     <AvailableItemName Include="TslCodegen" />
+  </ItemGroup>
+
+  <ItemGroup Condition="!$(TargetFramework.Contains('netstandard')) and !$(TaragetFramework.Contains('netcoreapp'))">
+    <None Include="$(TRINITY_NATIVE_LIB_PATH)">
+      <Link>%(RecursiveDir)%(FileName)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
   <Target Name="TslCodegenPrepare"
@@ -38,22 +46,19 @@
   </Target>
   
   <Target Name="TslCodegenCs"
-          Inputs="@(TslCodegen)"
-          Outputs="$(TslGeneratedCodePath)\**\*.cs"
           BeforeTargets="TslCompileCs"
           DependsOnTargets="TslCodegenPrepare"
           Condition="'@(TslCodegen)' != ''">
-    <Exec Command="&quot;$(TSL_CODEGEN_PATH)&quot; --ProjectRoot &quot;$(MSBuildProjectDirectory)&quot; --ScriptList &quot;@(TslCodegen)&quot; --RootNamespace $(RootNamespace) --OutputPath $(TslOutputPath) $(TslDebugArguments) $(TslAdditionalArguments)" />
+    <Exec Command="&quot;$(TSL_CODEGEN_PATH)&quot; --ProjectRoot &quot;$(MSBuildProjectDirectory)&quot; --ScriptList &quot;@(TslCodegen)&quot; --RootNamespace $(RootNamespace) --OutputPath &quot;$(TslOutputPath) &quot; $(TslDebugArguments) $(TslAdditionalArguments)" />
   </Target>
 
   <Target Name="TslCompileCs"
           BeforeTargets="CoreCompile"
-          DependsOnTargets="TslCodegenCs"
-          Condition="'@(TslCodegen)' != ''">
+          DependsOnTargets="TslCodegenCs">
 
     <Error
       Text="A Graph Engine project cannot be built with Prefer32Bit option enabled. Please uncheck the toggle in project properties page, or edit the project file."
-      Condition=" $(Prefer32Bit) == true " />
+      Condition=" $(Prefer32Bit) == true AND ('$(Platform)' == 'AnyCPU' OR '$(Platform)' == 'anycpu')" />
 
     <Error
       Text="A Graph Engine project should target AnyCPU or x64. Please change the platform in the project properties page, or edit the project file."
@@ -73,21 +78,5 @@
       -->
       <FileWrites Include="@(_TslGeneratedFileNames)" />
     </ItemGroup>
-  </Target>
-
-  <Target Name="BeforeBuild">
-    <!-- 
-      * Currently, `dotnet build` fails when Trinity.dll is present in the package directory.
-      * The error code is MSB4018, with message "PE image does not have metadata".
-      * Obviously it is picking up our unmanaged assembly and then crashed.
-      * As a workaround, we could delete the native assembly before we compile.
-      * This will fix the error but then introduce MSB3106.
-     -->
-  
-    <ItemGroup>
-      <Native_Assemblies Include="$(UserProfile)/.nuget/packages/graphengine.core/**/Trinity.dll" />
-    </ItemGroup>
-    <Message Text="Removing native Trinity assembly... %(Native_Assemblies.Identity)" Importance="High"/>
-    <Delete Files="%(Native_Assemblies.Identity)" ContinueOnError="true"/>
   </Target>
 </Project>

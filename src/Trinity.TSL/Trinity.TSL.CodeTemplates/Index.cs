@@ -218,7 +218,7 @@ namespace t_Namespace
         /// Performs a substring sequence query on <see cref="Trinity.Global.LocalStorage"/>. The semantics of
         /// this type of query is that, given a sequence of query strings <c>q_1, q_2,...,q_n</c> in 
         /// <paramref name="query"/>, the match condition on a target string is that all the strings in the sequence
-        /// are the substrings of the target string, and the order of the substring occurances should correspond
+        /// are the substrings of the target string, and the order of the substring occurrences should correspond
         /// strictly to that given by <paramref name="query"/>. For example (let <c>S</c> denote the target string):
         /// <example>
         /// <list type="bullet">
@@ -262,7 +262,7 @@ namespace t_Namespace
         /// Performs a substring sequence query on <see cref="Trinity.Global.LocalStorage"/>. The semantics of
         /// this type of query is that, given a sequence of query strings <c>q_1, q_2,...,q_n</c> in 
         /// <paramref name="query"/>, the match condition on a target string is that all the strings in the sequence
-        /// are the substrings of the target string, and the order of the substring occurances should correspond
+        /// are the substrings of the target string, and the order of the substring occurrences should correspond
         /// strictly to that given by <paramref name="query"/>. For example (let <c>S</c> denote the target string):
         /// <example>
         /// <list type="bullet">
@@ -362,7 +362,7 @@ namespace t_Namespace
                                 IF("$t_index->target_field->fieldType->is_string()");
                                 {
                                     MAP_VAR("t_field_name", "target", MemberOf = "t_index");
-                                    new_index.AddItem(accessor.t_field_name, accessor.CellID.Value);
+                                    new_index.AddItem(accessor.t_field_name, accessor.CellId);
                                 }
                                 ELSE();
                                 {
@@ -383,7 +383,7 @@ namespace t_Namespace
                                     /*END*/
                                     {
                                         MAP_VAR("t_element", "std::string(\"element_\") + GetString(%final_element)");
-                                        new_index.AddItem((string)t_element, accessor.CellID.Value);
+                                        new_index.AddItem((string)t_element, accessor.CellId);
                                     }
 
                                     META("delete %container_chain;");
@@ -536,7 +536,7 @@ namespace t_Namespace
     [MAP_VAR("t_data_type", "", MemberOf = "t_substring_indexed_list_type")]
     [MAP_VAR("t_field_type", "data_type_get_accessor_name($$.get())", MemberOf = "t_substring_indexed_list_type")]
     /// <summary>
-    /// Provides interfaces to be translated to index queires in Linq expressions.
+    /// Provides interfaces to be translated to index queries in Linq expressions.
     /// </summary>
     public static class SubstringQueryExtension
     {

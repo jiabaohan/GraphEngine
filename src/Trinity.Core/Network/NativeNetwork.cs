@@ -54,13 +54,10 @@ namespace Trinity.Network
         /// </summary>
         public byte* Buffer; // allocate after receiving the message header
         /// <summary>
-        /// Indicates the number of bytes received from the communication instance.
+        /// For RECV: Indicates the number of bytes received from the communication instance. Excluding SOCKET_HEADER.
+        /// For SEND: Indicates the number of bytes in the response message, produced by the corresponding message handler. Including SOCKET_HEADER.
         /// </summary>
-        public UInt32 BytesReceived;
-        /// <summary>
-        /// Indicates the number of bytes in the response message, produced by the corresponding message handler.
-        /// </summary>
-        public UInt32 BytesToSend;
+        public UInt32 Length;
     }
 
     unsafe partial class NativeNetwork
@@ -82,45 +79,15 @@ namespace Trinity.Network
 
         public static void StartTrinityServer(UInt16 port)
         {
-            // config thread pool
-            int cpu_core_count = Environment.ProcessorCount;
-            CNativeNetwork.StartSocketServer(port);
-            StartWorkerThreadPool();
+            if(CNativeNetwork.StartSocketServer(port) == -1)
+            {
+                throw new System.Net.Sockets.SocketException();
+            }
         }
 
         public static void StopTrinityServer()
         {
             CNativeNetwork.StopSocketServer();
-        }
-
-        internal static void StartWorkerThreadPool()
-        {
-            int ThreadPoolSize = Environment.ProcessorCount << 1;
-            for (int t = 0; t < ThreadPoolSize; t++)
-            {
-                (new Thread(WorkerThreadProc)).Start();
-            }
-        }
-
-        internal static void WorkerThreadProc()
-        {
-            CNativeNetwork.EnterSocketServerThreadPool();
-            var dispatcher = Global.CommunicationInstance.MessageDispatcher;
-
-            while (true)
-            {
-                void* pContext = null;
-                CNativeNetwork.AwaitRequest(out pContext);
-                // a null pContext means that the completion port is closing.
-                if (pContext == null)
-                {
-                    break;
-                }
-                MessageBuff* sendRecvBuff = (MessageBuff*)pContext;
-                dispatcher(sendRecvBuff);
-                CNativeNetwork.SendResponse(pContext); // Send response back to the client
-            }
-            CNativeNetwork.ExitSocketServerThreadPool();
         }
     }
 }

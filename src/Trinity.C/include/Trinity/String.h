@@ -10,9 +10,9 @@
 #include <istream>
 #include <ostream>
 #include <sstream>
+#include <vector>
 #include <os/os.h>
 #include "Array.h"
-#include "Collections/List.h"
 
 #ifndef __cplusplus_cli
 #include <thread>
@@ -27,8 +27,6 @@ typedef wchar_t u16char;
 typedef char16_t u16char;
 #define _u(x) (u##x)
 #endif
-
-using namespace Trinity::Collections;
 
 namespace Trinity
 {
@@ -439,7 +437,7 @@ namespace Trinity
         template<typename... Args> static String Format(const String& format, Args... arguments)
         {
             String ret(format);
-            List<String> vec;
+            std::vector<String> vec;
             _to_strings(vec, arguments...);
 
             /* Find all templates for formatting */
@@ -486,7 +484,7 @@ namespace Trinity
         {
             return Join(separator.Data(), items...);
         }
-        template<typename T>static inline String Join(const String& separator, const List<T> &items)
+        template<typename T>static inline String Join(const String& separator, const std::vector<T> &items)
         {
             return Join(separator.Data(), items);
         }
@@ -496,13 +494,13 @@ namespace Trinity
         }
         template<typename... Args> static String Join(const char* separator, Args... items)
         {
-            List<String> vec;
+            std::vector<String> vec;
             _to_strings(vec, items...);
-            return _join<List<String>, String>(separator, vec);
+            return _join<std::vector<String>, String>(separator, vec);
         }
-        template<typename T> static inline String Join(const char* separator, const List<T> &items)
+        template<typename T> static inline String Join(const char* separator, const std::vector<T> &items)
         {
-            return _join<List<T>, T>(separator, items);
+            return _join<std::vector<T>, T>(separator, items);
         }
         template<typename T> static inline String Join(const char* separator, const Array<T> &items)
         {
@@ -523,15 +521,15 @@ namespace Trinity
             RemoveEmptyEntries,
             PreserveEmptyEntries,
         };
-        Array<String> Split(const char* seperators, StringSplitOptions option = StringSplitOptions::RemoveEmptyEntries)
+        Array<String> Split(const char* separators, StringSplitOptions option = StringSplitOptions::RemoveEmptyEntries)
         {
-            List<String> vec;
+            std::vector<String> vec;
             size_t split_head = 0;
             size_t search_idx = 0;
             bool non_empty_matched = false;//is the entry before last search_idx non-empty
             while (true)
             {
-                split_head = FindFirstNotOf(seperators, search_idx);
+                split_head = FindFirstNotOf(separators, search_idx);
                 bool split_head_found = (npos != split_head);
 
                 if (option == StringSplitOptions::PreserveEmptyEntries)
@@ -554,7 +552,7 @@ namespace Trinity
 
                 if (npos == split_head)
                     break;
-                search_idx = FindFirstOf(seperators, split_head);
+                search_idx = FindFirstOf(separators, split_head);
                 if (npos == search_idx)
                 {
                     vec.emplace_back(Substring(split_head, Length() - split_head));
@@ -679,29 +677,28 @@ namespace Trinity
             }
         }
 
-        //converts a utf-8 string to a UTF-16LE (Windows Unicode) array, <NUL> terminated.
-        Array<u16char> ToWcharArray() const
+        // len is ignored on non-windows
+        static Array<u16char> Utf8ToUtf16(const char* str, size_t len)
         {
 #if defined(TRINITY_PLATFORM_WINDOWS)
-            size_t byte_count = Length();
             int wchar_count;
 
-            if (byte_count == 0)
+            if (len == 0)
             {
                 Array<u16char> empty_arr(1);
                 empty_arr[0] = 0;
                 return empty_arr;
             }
 
-            if (byte_count > INT_MAX)
+            if (len > INT_MAX)
                 return Array<u16char>(0);
 
-            wchar_count = MultiByteToWideChar(CP_UTF8, 0, c_str(), static_cast<int>(byte_count), NULL, 0);
+            wchar_count = MultiByteToWideChar(CP_UTF8, 0, str, static_cast<int>(len), NULL, 0);
             if (wchar_count == 0)
                 return Array<u16char>(0);
 
             Array<u16char> wchar_arr(wchar_count + 1);//add another unit for storing <NUL>
-            if (0 == MultiByteToWideChar(CP_UTF8, 0, c_str(), static_cast<int>(byte_count), wchar_arr, wchar_count))
+            if (0 == MultiByteToWideChar(CP_UTF8, 0, str, static_cast<int>(len), wchar_arr, wchar_count))
                 return Array<u16char>(0);
             //Manually set the terminating <NUL>
 
@@ -709,13 +706,23 @@ namespace Trinity
             return wchar_arr;
 #else
             std::wstring_convert<std::codecvt_utf8_utf16<u16char>, u16char> converter;
-            auto wstr = converter.from_bytes(c_str());
+            auto wstr = converter.from_bytes(str);
             int wchar_count = wstr.length();
             Array<u16char> wchar_arr(wchar_count + 1);
             memcpy(wchar_arr, wstr.c_str(), wchar_count * sizeof(u16char));
             wchar_arr[wchar_count] = 0;
 
             return wchar_arr;
+#endif
+        }
+
+        //converts a utf-8 string to a UTF-16LE (Windows Unicode) array, <NUL> terminated.
+        Array<u16char> ToWcharArray() const
+        {
+#if defined(TRINITY_PLATFORM_WINDOWS)
+            return Utf8ToUtf16(c_str(), Length());
+#else
+            return Utf8ToUtf16(c_str(), 0);
 #endif
         }
 
@@ -769,8 +776,8 @@ namespace Trinity
     private:
 
 #pragma region Private methods
-        static void _to_strings(List<String>& vec) { (void*)(&vec); }
-        template<typename T, typename... Args> static void _to_strings(List<String>& vec, T firstArgument, Args... restArguments)
+        static void _to_strings(std::vector<String>& vec) { (void*)(&vec); }
+        template<typename T, typename... Args> static void _to_strings(std::vector<String>& vec, T firstArgument, Args... restArguments)
         {
             vec.emplace_back(ToString(firstArgument));
             _to_strings(vec, restArguments...);

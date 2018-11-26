@@ -18,45 +18,38 @@ using System.Diagnostics;
 using Trinity.Core.Lib;
 using System.Runtime.CompilerServices;
 using Trinity.Configuration;
+using static Trinity.Utilities.EventRaiser;
 
 namespace Trinity.Storage
 {
     public unsafe partial class LocalMemoryStorage
     {
+        public TrinityErrorCode ApplyDelta(string mpFilePath, string indexFilePath, string loFilePath)
+        {
+            return CLocalMemoryStorage.LoadIncrementalDiskImage(mpFilePath, indexFilePath, loFilePath);
+        }
+
         /// <summary>
         /// Loads Trinity key-value store from disk to main memory.
         /// </summary>
-        /// <returns>true if loading succeeds; otherwise, false.</returns>
-        public bool LoadStorage()
+        /// <returns>
+        /// TrinityErrorCode.E_SUCCESS if loading succeeds; 
+        /// Other error codes indicate a failure.
+        /// </returns>
+        public TrinityErrorCode LoadStorage()
         {
             lock (m_lock)
             {
-                try
-                {
-                    StorageBeforeLoad();
-                }
-                catch (Exception ex)
-                {
-                    Log.WriteLine(LogLevel.Error, "An error oucurred in the StorageBeforeLoad event handler: {0}", ex.ToString());
-                }
+                TrinityErrorCode ret = CSynchronizeStorageRoot();
+                if (TrinityErrorCode.E_SUCCESS != ret) { return ret; }
 
-                if (TrinityErrorCode.E_SUCCESS != CSynchronizeStorageRoot()) { return false; }
-                bool ret = CLocalMemoryStorage.CLoadStorage();
+                ret = RaiseStorageEvent(StorageBeforeLoad, nameof(StorageBeforeLoad));
+                if (TrinityErrorCode.E_SUCCESS != ret) { return ret; }
 
-                //TODO WAL and cell type signatures should migrate to KVStore extensions.
-                InitializeWriteAheadLogFile();
+                ret = CLocalMemoryStorage.CLoadStorage();
+                if (TrinityErrorCode.E_SUCCESS != ret) { return ret; }
 
-                LoadCellTypeSignatures();
-
-                try
-                {
-                    StorageLoaded();
-                }
-                catch (Exception ex)
-                {
-                    Log.WriteLine(LogLevel.Error, "An error oucurred in the StorageLoaded event handler: {0}", ex.ToString());
-                }
-
+                ret = RaiseStorageEvent(StorageLoaded, nameof(StorageLoaded));
                 return ret;
             }
         }
@@ -64,39 +57,24 @@ namespace Trinity.Storage
         /// <summary>
         /// Dumps the in-memory key-value store to disk files.
         /// </summary>
-        /// <returns>true if saving succeeds; otherwise, false.</returns>
-        public bool SaveStorage()
+        /// <returns>
+        /// TrinityErrorCode.E_SUCCESS if saving succeeds;
+        /// Other error codes indicate a failure.
+        /// </returns>
+        public TrinityErrorCode SaveStorage()
         {
             lock (m_lock)
             {
-                try
-                {
-                    StorageBeforeSave();
-                }
-                catch (Exception ex)
-                {
-                    Log.WriteLine(LogLevel.Error, "An error oucurred in the StorageBeforeSave event handler: {0}", ex.ToString());
-                }
+                TrinityErrorCode ret = CSynchronizeStorageRoot();
+                if (TrinityErrorCode.E_SUCCESS != ret) { return ret; }
 
-                if (TrinityErrorCode.E_SUCCESS != CSynchronizeStorageRoot()) { return false; }
-                bool ret = CLocalMemoryStorage.CSaveStorage();
+                ret = RaiseStorageEvent(StorageBeforeSave, nameof(StorageBeforeSave));
+                if (TrinityErrorCode.E_SUCCESS != ret) { return ret; }
 
-                if (ret)
-                {
-                    CreateWriteAheadLogFile();
+                ret = CLocalMemoryStorage.CSaveStorage();
+                if (TrinityErrorCode.E_SUCCESS != ret) { return ret; }
 
-                    SaveCellTypeSignatures();
-
-                    try
-                    {
-                        StorageSaved();
-                    }
-                    catch (Exception ex)
-                    {
-                        Log.WriteLine(LogLevel.Error, "An error oucurred in the StorageSaved event handler: {0}", ex.ToString());
-                    }
-                }
-
+                ret = RaiseStorageEvent(StorageSaved, nameof(StorageSaved));
                 return ret;
             }
         }
@@ -104,37 +82,41 @@ namespace Trinity.Storage
         /// <summary>
         /// Resets local memory storage to the initial state. The content in the memory storage will be cleared. And the memory storage will be shrunk to the initial size.
         /// </summary>
-        /// <returns>true if resetting succeeds; otherwise, false.</returns>
-        public bool ResetStorage()
+        /// <returns>
+        /// TrinityErrorCode.E_SUCCESS if resetting succeeds; 
+        /// Other error codes indicate a failure.
+        /// </returns>
+        public TrinityErrorCode ResetStorage()
         {
             lock (m_lock)
             {
-                try
-                {
-                    StorageBeforeReset();
-                }
-                catch (Exception ex)
-                {
-                    Log.WriteLine(LogLevel.Error, "An error oucurred in the StorageBeforeReset event handler: {0}", ex.ToString());
-                }
+                TrinityErrorCode ret = CSynchronizeStorageRoot();
+                if (TrinityErrorCode.E_SUCCESS != ret) { return ret; }
 
-                if (TrinityErrorCode.E_SUCCESS != CSynchronizeStorageRoot()) { return false; }
-                string path   = WriteAheadLogFilePath;
-                bool   ret    = CLocalMemoryStorage.CResetStorage();
+                ret = RaiseStorageEvent(StorageBeforeReset, nameof(StorageBeforeReset));
+                if (TrinityErrorCode.E_SUCCESS != ret) { return ret; }
 
-                ResetWriteAheadLog(path);
+                ret = CLocalMemoryStorage.CResetStorage();
+                if (TrinityErrorCode.E_SUCCESS != ret) { return ret; }
 
-                try
-                {
-                    StorageReset();
-                }
-                catch (Exception ex)
-                {
-                    Log.WriteLine(LogLevel.Error, "An error oucurred in the StorageReset event handler: {0}", ex.ToString());
-                }
-
+                ret = RaiseStorageEvent(StorageReset, nameof(StorageReset));
                 return ret;
             }
+        }
+
+        /// <summary>
+        /// Retrieves the path of the given storage slot.
+        /// A storage slot is a subdirectory of the storage root,
+        /// containing a specific version of disk image.
+        /// </summary>
+        /// <param name="isPrimary">Whether to use primary slot or secondary slot.</param>
+        /// <returns></returns>
+        public unsafe string GetStorageSlot(bool isPrimary)
+        {
+            char* buf  = CLocalMemoryStorage.CGetStorageSlot(isPrimary ? 1 : 0);
+            string ret = new string(buf);
+            Memory.free(buf);
+            return ret;
         }
 
         /// <summary>
@@ -184,7 +166,7 @@ namespace Trinity.Storage
         {
             try
             {
-                string path = Path.Combine(TrinityConfig.StorageRoot, c_celltype_signature_file_name);
+                string path = Path.Combine(GetStorageSlot(true), c_celltype_signature_file_name);
                 if (!File.Exists(path))
                     return;
                 Log.WriteLine(LogLevel.Info, "Loading cell type signatures.");
@@ -224,7 +206,7 @@ namespace Trinity.Storage
             Log.WriteLine(LogLevel.Info, "Saving cell type signatures.");
             try
             {
-                File.WriteAllLines(Path.Combine(TrinityConfig.StorageRoot, c_celltype_signature_file_name), Global.storage_schema.CellTypeSignatures);
+                File.WriteAllLines(Path.Combine(GetStorageSlot(true), c_celltype_signature_file_name), Global.storage_schema.CellTypeSignatures);
             }
             catch
             {

@@ -15,7 +15,7 @@ namespace Trinity.Storage
     /// <summary>
     /// Provides methods for interacting with the distributed memory store.
     /// </summary>
-    public unsafe abstract partial class MemoryCloud : IKeyValueStore, IEnumerable<IMessagePassingEndpoint>, ICommunicationModuleRegistry
+    public unsafe abstract partial class MemoryCloud : IKeyValueStore, IEnumerable<IMessagePassingEndpoint>, ICommunicationModuleRegistry, IDisposable
     {
         #region Abstract interfaces
         public abstract bool Open(ClusterConfig config, bool nonblocking);
@@ -144,7 +144,6 @@ namespace Trinity.Storage
         /// Gets the message passing endpoint bound to a partition.
         /// </summary>
         /// <param name="partitionId">The id of the target partition.</param>
-        /// <returns></returns>
         public IMessagePassingEndpoint this[int partitionId] => StorageTable[partitionId];
         /// <inheritdoc/>
         public IEnumerator<IMessagePassingEndpoint> GetEnumerator()

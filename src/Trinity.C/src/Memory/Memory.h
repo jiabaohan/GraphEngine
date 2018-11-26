@@ -7,8 +7,10 @@
 
 namespace Memory
 {
-    const uint32_t PAGE_MASK = 0xFFFFF000;
-    const uint32_t PAGE_RANGE = 0xFFF; // PAGE_RANGE = ~PAGE_MASK = SYSTEM_PAGE_SIZE - 1
+    const uint32_t PAGE_MASK_32 = 0xFFFFF000;
+    const uint64_t PAGE_MASK_64 = 0xFFFFFFFFFFFFF000;
+    const uint32_t PAGE_RANGE_32 = 0xFFF; // PAGE_RANGE_32 = ~PAGE_MASK_32 = SYSTEM_PAGE_SIZE - 1
+    const uint64_t PAGE_RANGE_64 = 0xFFF; // PAGE_RANGE_64 = ~PAGE_MASK_64 = SYSTEM_PAGE_SIZE - 1
 
     const uint32_t WorkingSetDecreaseStep = 67108864; //64M
     const uint32_t MinWorkingSetSize = 16777216; //16M
@@ -33,7 +35,7 @@ namespace Memory
     bool ExpandMemoryFromCurrentPosition(void* p, uint64_t size_to_expand);
     bool ExpandMemoryRegion(char*, uint64_t, uint64_t);
     void ShrinkMemoryRegion(char* p, uint32_t current_size, uint32_t desired_size);
-    void FreeMemoryRegion(char* trunkPtr, uint64_t size);
+    void FreeMemoryRegion(void* lpaddress, uint64_t size);
     
     BOOL DecommitMemory(void* lpAddr, uint64_t size);
     void* LockedAlloc(uint64_t size);
@@ -46,9 +48,14 @@ namespace Memory
     void SetTrinityDefaultWorkingSet();
     void SetWorkingSetProfile(int32_t flag);
 
-    inline uint32_t RoundUpToPage(uint32_t size)
+    inline uint32_t RoundUpToPage_32(uint32_t size)
     {
-        return (size + Memory::PAGE_RANGE) & Memory::PAGE_MASK;
+        return (size + Memory::PAGE_RANGE_32) & Memory::PAGE_MASK_32;
+    }
+
+    inline uint64_t RoundUpToPage_64(uint64_t size)
+    {
+        return (size + Memory::PAGE_RANGE_64) & Memory::PAGE_MASK_64;
     }
 
     void * MemoryReserve(uint64_t size);

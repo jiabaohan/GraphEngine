@@ -55,7 +55,7 @@ namespace Trinity
         }
 
         /// <summary>
-        /// Return the main infomation of current configuration
+        /// Return the main information of current configuration
         /// </summary>
         /// <returns></returns>
         internal static string OutputCurrentConfig()
@@ -265,11 +265,11 @@ namespace Trinity
         {
             try
             {
-                LoadTrinityConfig(true);
+                LoadConfig_impl(DefaultConfigFile);
             }
             catch (Exception e)
             {
-                Log.WriteLine(LogLevel.Error, e.Message);
+                Log.WriteLine(LogLevel.Error, $"{nameof(TrinityConfig)}: {{0}}", e.ToString());
                 throw;
             }
         }
@@ -282,28 +282,37 @@ namespace Trinity
         {
             try
             {
-                LoadTrinityConfig(configFile, true);
+                LoadConfig_impl(configFile);
             }
             catch (Exception e)
             {
-                Log.WriteLine(LogLevel.Error, e.Message);
+                Log.WriteLine(LogLevel.Error, $"{nameof(TrinityConfig)}: {{0}}", e.ToString());
                 throw;
             }
         }
 
-        internal static void LoadTrinityConfig(bool forceLoad = false)
-        {
-            LoadTrinityConfig(DefaultConfigFile, forceLoad);
-        }
-
-        internal static void LoadTrinityConfig(string trinity_config_file, bool forceLoad = false)
+        /// <summary>
+        /// Loads from the default config file only if
+        /// no configuration file has been loaded. Does not throw.
+        /// </summary>
+        internal static void EnsureConfig()
         {
             lock (config_load_lock)
             {
-                if (is_config_loaded && !forceLoad)
-                    return;
+                if (is_config_loaded) return;
+                try { LoadConfig(); } catch { }
+            }
+        }
+
+        internal static void LoadConfig_impl(string trinity_config_file)
+        {
+            lock (config_load_lock)
+            {
                 if (!File.Exists(trinity_config_file))
+                {
+                    //TODO log warning
                     return;
+                }
 
                 var config = XmlConfiguration.Load(trinity_config_file);
 
@@ -316,7 +325,7 @@ namespace Trinity
                 }
                 else if (config.RootConfigVersion == ConfigurationConstants.Values.CURRENTVER)
                 {
-                    LoadConfigCurrrentVer(config);
+                    LoadConfigCurrentVer(config);
                 }
                 else
                 {
@@ -363,7 +372,7 @@ namespace Trinity
             s_clusterConfigurations.Add(ConfigurationConstants.Values.DEFAULT_CLUSTER, s_current_cluster_config);
         }
 
-        private static void LoadConfigCurrrentVer(XmlConfiguration config)
+        private static void LoadConfigCurrentVer(XmlConfiguration config)
         {
             s_localConfigurationSection = new ConfigurationSection(config.LocalSection);
             var clusterSections = config.ClusterSections;

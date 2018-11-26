@@ -5,11 +5,13 @@
     <TargetFramework>net461</TargetFramework>
     <Platforms>x64</Platforms>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <IsPackable>false</IsPackable>
+    <Configurations>Debug;Release</Configurations>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="GraphEngine.Azure.BlobStorage" Version="1.0.9083" />
-    <PackageReference Include="GraphEngine.LIKQ" Version="1.0.9083" />
+    <PackageReference Include="GraphEngine.Azure.BlobStorage" Version="$(DOTNET_PACKAGE_VERSION)" />
+    <PackageReference Include="GraphEngine.LIKQ" Version="$(DOTNET_PACKAGE_VERSION)" />
   </ItemGroup>
 
   <ItemGroup>
